@@ -41,11 +41,15 @@ def _is_wasapi(device_id: int) -> bool:
 
 
 def detect_virtual_cable(outputs: list[dict]) -> int | None:
-    for hint in CABLE_HINTS:
-        for out in outputs:
-            if hint in out["name"].lower():
-                return out["id"]
-    return None
+    matches = [
+        out
+        for out in outputs
+        if any(hint in out["name"].lower() for hint in CABLE_HINTS)
+    ]
+    for out in matches:  # prefer the low-latency WASAPI endpoint
+        if out["hostapi"] == WASAPI:
+            return out["id"]
+    return matches[0]["id"] if matches else None
 
 
 def list_devices() -> dict:
