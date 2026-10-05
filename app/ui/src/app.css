@@ -1,21 +1,156 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────
+   Linear-inspired design tokens
+   Deep dark canvas · single lavender accent · surface ladder
+   ───────────────────────────────────────────────────────────── */
 @theme {
-  --color-ink-950: #0b1220;
-  --color-ink-900: #111a2e;
-  --color-ink-800: #16203a;
-  --color-line: #24304a;
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
+  /* Surfaces — canvas plus the four-step surface ladder */
+  --color-canvas: #010102;
+  --color-surface-1: #0f1011;
+  --color-surface-2: #141516;
+  --color-surface-3: #18191a;
+  --color-surface-4: #191a1b;
+  --color-inverse-canvas: #ffffff;
+  --color-inverse-surface-1: #f5f6f6;
+  --color-inverse-surface-2: #f6f7f7;
+  --color-inverse-ink: #000000;
+
+  /* Hairlines */
+  --color-hairline: #23252a;
+  --color-hairline-strong: #34343a;
+  --color-hairline-tertiary: #3e3e44;
+
+  /* Text */
+  --color-ink: #f7f8f8;
+  --color-ink-muted: #d0d6e0;
+  --color-ink-subtle: #8a8f98;
+  --color-ink-tertiary: #62666d;
+
+  /* Primary — the single chromatic accent */
+  --color-primary: #5e6ad2;
+  --color-on-primary: #ffffff;
+  --color-primary-hover: #828fff;
+  --color-primary-focus: #5e69d1;
+
+  /* Semantic */
+  --color-success: #27a644;
+  --color-brand-secure: #7a7fad;
+
+  /* Typography — Linear Display/Text/Mono with open-source fallbacks */
+  --font-sans: "Linear Display", "Inter", "SF Pro Display", system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-mono: "Linear Mono", "JetBrains Mono", "Geist Mono", ui-monospace, "SFMono-Regular", Menlo,
+    monospace;
+
+  --text-display-xl: 5rem;
+  --text-display-xl--line-height: 1.05;
+  --text-display-xl--letter-spacing: -0.0375em;
+  --text-display-xl--font-weight: 600;
+
+  --text-display-lg: 3.5rem;
+  --text-display-lg--line-height: 1.1;
+  --text-display-lg--letter-spacing: -0.032em;
+  --text-display-lg--font-weight: 600;
+
+  --text-display-md: 2.5rem;
+  --text-display-md--line-height: 1.15;
+  --text-display-md--letter-spacing: -0.025em;
+  --text-display-md--font-weight: 600;
+
+  --text-headline: 1.75rem;
+  --text-headline--line-height: 1.2;
+  --text-headline--letter-spacing: -0.021em;
+  --text-headline--font-weight: 600;
+
+  --text-card-title: 1.375rem;
+  --text-card-title--line-height: 1.25;
+  --text-card-title--letter-spacing: -0.018em;
+  --text-card-title--font-weight: 500;
+
+  --text-subhead: 1.25rem;
+  --text-subhead--line-height: 1.4;
+  --text-subhead--letter-spacing: -0.01em;
+
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.5;
+  --text-body-lg--letter-spacing: -0.0056em;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-body--letter-spacing: -0.003em;
+
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.5;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.4;
+
+  --text-button: 0.875rem;
+  --text-button--line-height: 1.2;
+  --text-button--font-weight: 500;
+
+  --text-eyebrow: 0.8125rem;
+  --text-eyebrow--line-height: 1.3;
+  --text-eyebrow--letter-spacing: 0.031em;
+  --text-eyebrow--font-weight: 500;
+
+  --text-mono: 0.8125rem;
+  --text-mono--line-height: 1.5;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-xxl: 24px;
+  --radius-pill: 9999px;
+
+  /* Layout */
+  --container-content: 48rem;
 }
 
-html {
-  color-scheme: dark;
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 }
 
-body {
-  margin: 0;
-  background: var(--color-ink-950);
-  color: #e5e7eb;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+@layer components {
+  .container-content {
+    @apply mx-auto w-full max-w-content px-4 sm:px-6;
+  }
+
+  .panel {
+    @apply rounded-lg border border-hairline bg-surface-1;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-button transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-on-primary hover:bg-primary-hover active:bg-primary-focus;
+  }
 }

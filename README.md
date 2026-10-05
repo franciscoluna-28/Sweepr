@@ -1,4 +1,4 @@
-# DeepFilterNet Denoiser
+# Meowless
 
 A simple local web app for removing noise from audio using
 [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet). Everything runs on

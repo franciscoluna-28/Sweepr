@@ -10,7 +10,7 @@ from . import engine
 UI_DIST = Path(__file__).resolve().parent / "ui" / "dist"
 
 app = FastAPI(
-    title="DeepFilterNet Denoiser",
+    title="Meowless",
     description=(
         "Single-process app that removes background noise from audio with "
         "DeepFilterNet. The Svelte UI is served by this same app and calls "

@@ -5,7 +5,7 @@
   import { enhance, getHealth } from './lib/api'
 
   let file = $state<File | null>(null)
-  let atten = $state(100)
+  let atten = $state(50)
   let postFilter = $state(false)
   let loading = $state(false)
   let status = $state('')
@@ -59,57 +59,61 @@
   }
 </script>
 
-<main class="mx-auto max-w-2xl px-5 pb-16 pt-8">
+<main class="container-content py-10 sm:py-14">
   <header class="mb-6">
-    <h1 class="m-0 text-2xl font-bold">DeepFilterNet Denoiser</h1>
-    <p class="m-0 text-slate-400">
-      Clean up noisy recordings. {#if online === false}<span class="text-amber-400"
-          >Backend offline</span
-        >{:else if online}Runs locally — audio never leaves your machine.{/if}
+    <h1 class="m-0 text-headline">Meowless</h1>
+    <p class="m-0 mt-1 text-body-sm text-ink-subtle">
+      Clean noisy recordings locally.{#if online === false}
+        <span class="text-ink-tertiary">Backend offline.</span>{/if}
     </p>
   </header>
 
-  <section class="mb-4 rounded-xl border border-line bg-ink-900 p-5">
-    <DropZone {file} onpick={pick} />
-  </section>
-
-  <section class="mb-4 rounded-xl border border-line bg-ink-900 p-5">
-    <label class="flex items-center justify-between gap-3">
-      <span>Noise reduction strength</span>
-      <output class="tabular-nums text-slate-400">{atten} dB</output>
-    </label>
-    <input
-      type="range"
-      min="0"
-      max="100"
-      step="1"
-      bind:value={atten}
-      class="my-3 w-full accent-accent"
-    />
-    <div class="flex justify-between text-xs text-slate-500">
-      <span>Off</span><span>Light</span><span>Meeting</span><span>Max</span>
-    </div>
-
-    <label class="mt-4 flex items-start gap-3 text-sm text-slate-400">
-      <input type="checkbox" bind:checked={postFilter} class="mt-0.5 accent-accent" />
-      <span>Extra post-filter (over-attenuate very noisy parts)</span>
-    </label>
-
-    <button
-      class="mt-5 rounded-lg bg-accent px-5 py-3 font-semibold text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-45"
-      disabled={!file || loading}
-      onclick={run}
-    >
-      {loading ? 'Processing…' : 'Enhance'}
-    </button>
-    {#if status}
-      <p class="mb-0 mt-3 text-sm text-slate-400">{status}</p>
-    {/if}
-  </section>
-
-  {#if origUrl && enhUrl}
-    <section class="mb-4 rounded-xl border border-line bg-ink-900 p-5">
-      <AbPlayer {origUrl} {enhUrl} filename={downloadName} />
+  <div class="grid gap-3">
+    <section class="panel p-4 sm:p-5">
+      <DropZone {file} onpick={pick} />
     </section>
-  {/if}
+
+    <section class="panel p-4 sm:p-5">
+      <div class="flex items-center justify-between gap-4">
+        <label for="atten" class="text-body font-medium">Noise reduction strength</label>
+        <output for="atten" class="font-mono text-body-sm text-ink-subtle tabular-nums">
+          {atten} dB
+        </output>
+      </div>
+      <input
+        id="atten"
+        type="range"
+        min="0"
+        max="100"
+        step="1"
+        bind:value={atten}
+        class="mt-4 w-full cursor-pointer accent-primary"
+      />
+      <div class="mt-2 flex justify-between text-caption text-ink-tertiary">
+        <span>Off</span><span>Light</span><span>Meeting</span><span>Max</span>
+      </div>
+
+      <label class="mt-6 flex items-start gap-3 text-body-sm text-ink-subtle">
+        <input
+          type="checkbox"
+          bind:checked={postFilter}
+          class="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary"
+        />
+        <span>Extra post-filter - Suppress very noisy parts</span>
+      </label>
+
+      <button class="btn btn-primary mt-6 h-10 w-full" disabled={!file || loading} onclick={run}>
+        {loading ? 'Processing…' : 'Enhance audio'}
+      </button>
+      {#if status}
+        <p class="m-0 mt-3 text-body-sm text-ink-subtle">{status}</p>
+      {/if}
+    </section>
+
+    {#if origUrl && enhUrl}
+      <section class="panel p-4 sm:p-5">
+        <AbPlayer {origUrl} {enhUrl} filename={downloadName} />
+      </section>
+    {/if}
+  </div>
 </main>

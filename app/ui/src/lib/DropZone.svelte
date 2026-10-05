@@ -9,11 +9,16 @@
 </script>
 
 <div
-  class="rounded-xl border-2 border-dashed p-7 text-center transition-colors {over
-    ? 'border-accent bg-ink-800'
-    : 'border-line'}"
+  class="rounded-md p-8 text-center transition-colors {over ? 'bg-surface-3' : 'bg-surface-2'}"
   role="button"
   tabindex="0"
+  onclick={() => input.click()}
+  onkeydown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      input.click()
+    }
+  }}
   ondragover={(e) => {
     e.preventDefault()
     over = true
@@ -32,11 +37,21 @@
     bind:this={input}
     onchange={(e) => take(e.currentTarget.files?.[0])}
   />
-  <p class="m-0">
-    <strong>Drop an audio file</strong> or
-    <button class="cursor-pointer border-none bg-transparent p-0 text-[inherit] text-accent underline" onclick={() => input.click()}>
+  <p class="m-0 text-body">
+    <strong class="font-medium text-ink">Drop an audio file</strong>
+    <span class="text-ink-tertiary"> or </span>
+    <button
+      type="button"
+      class="cursor-pointer border-none bg-transparent p-0 text-primary underline underline-offset-2 hover:text-primary-hover"
+      onclick={(e) => {
+        e.stopPropagation()
+        input.click()
+      }}
+    >
       browse
     </button>
   </p>
-  <p class="mb-0 mt-1 text-sm text-slate-400">{file ? file.name : 'No file selected'}</p>
+  <p class="m-0 mt-1 text-body-sm {file ? 'text-ink-muted' : 'text-ink-tertiary'}">
+    {file ? file.name : 'No file selected'}
+  </p>
 </div>
