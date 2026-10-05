@@ -153,4 +153,8 @@
   .btn-primary {
     @apply bg-primary text-on-primary hover:bg-primary-hover active:bg-primary-focus;
   }
+
+  .field {
+    @apply h-9 w-full rounded-md border border-hairline bg-surface-2 px-2 text-body-sm text-ink;
+  }
 }
