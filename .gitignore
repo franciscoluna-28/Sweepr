@@ -12,6 +12,12 @@ env/
 # uv
 .uv/
 
+# Node / frontend
+node_modules/
+dist/
+.vite/
+.svelte-kit/
+
 # DeepFilterNet model cache / downloads
 models/
 *.tar.gz

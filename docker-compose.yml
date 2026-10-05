@@ -1,0 +1,35 @@
+# Dev stack: FastAPI (auto-reload) + Vite (HMR).
+# Open http://localhost:5173 — Vite proxies /api to the api service.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8765 --reload
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./app:/srv/app
+      - model-cache:/root/.cache
+    ports:
+      - "8765:8765"
+
+  web:
+    build:
+      context: ./app/ui
+      dockerfile: Dockerfile.dev
+    command: pnpm dev
+    environment:
+      VITE_API_PROXY: http://api:8765
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./app/ui:/web
+      - ui_node_modules:/web/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  model-cache:
+  ui_node_modules:

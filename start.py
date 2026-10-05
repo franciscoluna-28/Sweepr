@@ -13,4 +13,4 @@ def open_browser():
 
 if __name__ == "__main__":
     threading.Timer(1.5, open_browser).start()
-    uvicorn.run("backend.main:app", host=HOST, port=PORT, log_level="info")
+    uvicorn.run("app.main:app", host=HOST, port=PORT, log_level="info")

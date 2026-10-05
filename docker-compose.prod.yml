@@ -1,0 +1,15 @@
+# Production stack: one container serving the built UI + the API.
+# Build:  docker compose -f docker-compose.prod.yml up --build
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8765:8765"
+    volumes:
+      - model-cache:/root/.cache
+    restart: unless-stopped
+
+volumes:
+  model-cache:
