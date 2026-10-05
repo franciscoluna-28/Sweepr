@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# uv
+.uv/
+
+# DeepFilterNet model cache / downloads
+models/
+*.tar.gz
+
+# App runtime artifacts
+*.log
+out/
+enhance.log
+
+# Test artifacts
+noisy.wav
+enhanced_*.wav
+*_enhanced.wav
+out_test.wav
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
