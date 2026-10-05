@@ -41,6 +41,9 @@ natively and the container will proxy record-mode requests to it:
 docker compose up --build                    # MEOWLESS_AUDIO_BRIDGE points at the bridge
 ```
 
+Or just double-click **`run_docker.bat`**, which starts the bridge in its own
+window and then brings up the stack.
+
 `docker-compose` sets `MEOWLESS_AUDIO_BRIDGE=http://host.docker.internal:8766`
 (override with the `MEOWLESS_AUDIO_BRIDGE` env var). The bridge owns the audio
 devices and runs DeepFilterNet; the container only serves the UI/API. If Windows
@@ -143,6 +146,7 @@ app/             The monolith (one package, one process)
 start.py         Launcher (starts server, opens browser)
 audio_bridge.py  Runs the host audio bridge natively (for Docker)
 run.bat          Windows launcher
+run_docker.bat   Starts the bridge + Docker stack
 scripts/         Smoke test
 Dockerfile       Production image (UI build + Python runtime)
 Dockerfile.dev   Dev API image
