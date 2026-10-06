@@ -8,10 +8,6 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8765 --reload
     environment:
       PYTHONUNBUFFERED: "1"
-      # Host audio bridge — run `python audio_bridge.py` natively for record mode.
-      MEOWLESS_AUDIO_BRIDGE: ${MEOWLESS_AUDIO_BRIDGE:-http://host.docker.internal:8766}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - ./app:/srv/app
       - model-cache:/root/.cache

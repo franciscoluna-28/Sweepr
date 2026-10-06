@@ -6,4 +6,3 @@ uvicorn[standard]
 python-multipart
 soundfile
 numpy
-sounddevice

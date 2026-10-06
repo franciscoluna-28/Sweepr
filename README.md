@@ -1,62 +1,17 @@
 # Meowless
 
-A simple local web app for removing noise from audio using
+A simple local web app for removing noise from a single audio file using
 [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet). Everything runs on
 your machine — recordings are never uploaded anywhere.
 
 ## Features
 
-- **Record mode (default)** — run your microphone through the denoiser in real
-  time and feed the result into a virtual audio cable, so Zoom/Discord/OBS see a
-  clean mic. Pick input + output devices from the UI.
-- **Edit mode** — drag & drop an audio file and download the cleaned WAV
+- **Denoise one audio file** — drag & drop, or browse, and download the cleaned
+  WAV
 - **Noise reduction strength** slider (maps to DeepFilterNet's attenuation limit)
 - Optional post-filter for extra suppression on very noisy parts
 - A/B compare original vs enhanced
-- Installable as a desktop app (PWA)
-
-## Record mode (virtual microphone)
-
-Meowless captures your real microphone, denoises it live, and writes the result
-to a virtual audio cable. Other apps then use the cable as their microphone.
-
-1. Install a virtual cable driver: **VB-CABLE** (or VoiceMeeter) on Windows.
-2. In Meowless, pick your real mic as **Microphone** and `CABLE Input` as the
-   **Virtual cable output**, then press **Start virtual mic**.
-3. In Zoom/Discord/etc., choose `CABLE Output` as the microphone.
-
-**Latency:** the buffer path can run at ~5–20 ms, but the neural model's own
-look-ahead dominates. Expect roughly 40–100 ms end-to-end — great for calls and
-recording, not for zero-latency monitoring. Monitor with headphones (speakers
-cause feedback).
-
-### Record mode in Docker (host audio bridge)
-
-Docker Desktop on Windows runs a Linux VM that cannot see Windows audio, so the
-container cannot touch the microphone itself. Run the small **host audio bridge**
-natively and the container will proxy record-mode requests to it:
-
-```
-.venv\Scripts\python.exe audio_bridge.py     # listens on 0.0.0.0:8766
-docker compose up --build                    # MEOWLESS_AUDIO_BRIDGE points at the bridge
-```
-
-Or just double-click **`run_docker.bat`**, which starts the bridge in its own
-window and then brings up the stack.
-
-`docker-compose` sets `MEOWLESS_AUDIO_BRIDGE=http://host.docker.internal:8766`
-(override with the `MEOWLESS_AUDIO_BRIDGE` env var). The bridge owns the audio
-devices and runs DeepFilterNet; the container only serves the UI/API. If Windows
-Firewall prompts, allow the bridge. The bridge binds `0.0.0.0` so the container
-can reach it — run it only on a trusted machine.
-
-> **Roadmap — native sidecar.** The 1–2 ms round-trips used for guitar tracking
-> come from trivial DSP in a native driver path. A neural denoiser cannot reach
-> that; the model's look-ahead is the floor. To push toward it, the same
-> pipeline can be moved into a Rust sidecar (`deep_filter` + `cpal` with WASAPI
-> exclusive / lock-free ring buffers), with the Python service reduced to a
-> controller. That requires a Rust toolchain and is not built here.
-
+- Preserves the original sample rate; output is 24-bit WAV
 
 ## Requirements
 
@@ -98,10 +53,6 @@ production app runs entirely on Python.
 
 ## Docker
 
-> Record mode in a container needs the host audio bridge — see
-> [Record mode in Docker](#record-mode-in-docker-host-audio-bridge). Without it,
-> Edit mode still works and the UI shows a notice.
-
 ### Dev (hot reload)
 
 ```
@@ -138,15 +89,11 @@ needs no client changes.
 ```
 app/             The monolith (one package, one process)
   main.py        Serves the built UI + handles /api/*
-  engine.py      DeepFilterNet engine (file + streaming)
-  virtualmic.py  Real-time mic -> DFN -> virtual cable service
-  bridge.py      Host-side audio bridge for the Docker deployment
+  engine.py      DeepFilterNet engine (single-file, sample-rate preserving)
   ui/            Svelte 5 + Vite + TypeScript + Tailwind source
   ui/dist/       Build output served by main.py
 start.py         Launcher (starts server, opens browser)
-audio_bridge.py  Runs the host audio bridge natively (for Docker)
 run.bat          Windows launcher
-run_docker.bat   Starts the bridge + Docker stack
 scripts/         Smoke test
 Dockerfile       Production image (UI build + Python runtime)
 Dockerfile.dev   Dev API image
@@ -157,4 +104,5 @@ docker-compose.prod.yml  Production stack
 ## Notes
 
 - The strength slider: 0 dB = no change, 100 dB = maximum suppression.
-- Files are decoded and resampled to 48 kHz, processed, and returned as 16-bit WAV.
+- DeepFilterNet processes at 48 kHz internally; Meowless resamples back to the
+  source rate and writes a 24-bit WAV.
