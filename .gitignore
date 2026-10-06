@@ -26,6 +26,7 @@ models/
 *.log
 out/
 enhance.log
+app/data/
 
 # Test artifacts
 noisy.wav
