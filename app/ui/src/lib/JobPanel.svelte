@@ -1,0 +1,144 @@
+<script lang="ts">
+  import { isActive, jobFileUrl, jobZipUrl, type Job } from './api'
+
+  let { job, onclear }: { job: Job; onclear: () => void } = $props()
+
+  let expanded = $state<number | null>(null)
+
+  const total = $derived(job.files.length)
+  const doneCount = $derived(job.files.filter((f) => f.status === 'done').length)
+  const errorCount = $derived(job.files.filter((f) => f.status === 'error').length)
+  const settled = $derived(doneCount + errorCount)
+  const pct = $derived(total ? Math.round((settled / total) * 100) : 0)
+  const active = $derived(isActive(job.status))
+
+  const statusLabel = $derived.by(() => {
+    switch (job.status) {
+      case 'queued':
+        return 'Waiting in queue…'
+      case 'running':
+        return `Processing ${Math.min(settled + 1, total)} of ${total}…`
+      case 'done':
+        return `Done — ${doneCount} file${doneCount === 1 ? '' : 's'} ready`
+      case 'done_with_errors':
+        return `Finished — ${doneCount} ok, ${errorCount} failed`
+      case 'interrupted':
+        return 'Interrupted — the server restarted mid-job'
+      default:
+        return job.status
+    }
+  })
+
+  const eta = $derived.by(() => {
+    if (!active || settled === 0) return null
+    const elapsed = (Date.now() - Date.parse(job.created)) / 1000
+    const remaining = Math.round((elapsed / settled) * (total - settled))
+    if (!isFinite(remaining) || remaining < 1) return null
+    const m = Math.floor(remaining / 60)
+    const s = remaining % 60
+    return m > 0 ? `~${m}m ${s}s left` : `~${s}s left`
+  })
+
+  function badge(status: string): string {
+    switch (status) {
+      case 'done':
+        return 'text-success'
+      case 'error':
+        return 'text-red-400'
+      case 'processing':
+        return 'text-primary'
+      default:
+        return 'text-ink-tertiary'
+    }
+  }
+</script>
+
+<section class="panel p-4 sm:p-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="min-w-0">
+      <p class="m-0 text-body font-medium text-ink">{statusLabel}</p>
+      {#if eta}
+        <p class="m-0 mt-0.5 text-caption text-ink-tertiary">{eta}</p>
+      {/if}
+    </div>
+    <div class="flex items-center gap-2">
+      {#if doneCount > 0}
+        <a
+          class="btn h-8 border border-hairline bg-surface-2 px-3 text-body-sm text-ink hover:bg-surface-3"
+          href={jobZipUrl(job.id)}
+          download
+        >
+          Download .zip
+        </a>
+      {/if}
+      <button
+        type="button"
+        class="btn h-8 border border-hairline bg-surface-2 px-3 text-body-sm text-ink-subtle hover:bg-surface-3"
+        onclick={onclear}
+      >
+        {active ? 'Cancel' : 'Clear'}
+      </button>
+    </div>
+  </div>
+
+  <div class="mt-3 h-1 w-full overflow-hidden rounded-full bg-surface-3">
+    <div
+      class="h-full rounded-full bg-primary transition-[width] duration-300"
+      style="width: {pct}%"
+    ></div>
+  </div>
+
+  <ul class="m-4 list-none space-y-1 p-0">
+    {#each job.files as f, i}
+      <li class="rounded-md bg-surface-2 px-3 py-2">
+        <div class="flex items-center justify-between gap-3">
+          <span class="min-w-0 truncate text-body-sm text-ink-muted">
+            <span class="mr-2 font-mono {badge(f.status)}">
+              {#if f.status === 'done'}✓{:else if f.status === 'error'}✗{:else if f.status === 'processing'}●{:else}○{/if}
+            </span>
+            {f.name}
+          </span>
+          <span class="flex shrink-0 items-center gap-3">
+            {#if f.status === 'done'}
+              <button
+                type="button"
+                class="cursor-pointer border-none bg-transparent p-0 text-caption text-ink-tertiary underline underline-offset-2 hover:text-ink"
+                onclick={() => (expanded = expanded === i ? null : i)}
+              >
+                {expanded === i ? 'Hide A/B' : 'A/B'}
+              </button>
+              <a
+                class="text-caption text-primary underline underline-offset-2 hover:text-primary-hover"
+                href={jobFileUrl(job.id, i, 'out')}
+                download
+              >
+                Download
+              </a>
+            {:else if f.status === 'processing'}
+              <span class="text-caption text-primary">working…</span>
+            {:else if f.status === 'error'}
+              <span class="text-caption text-red-400">failed</span>
+            {:else}
+              <span class="text-caption text-ink-tertiary">queued</span>
+            {/if}
+          </span>
+        </div>
+        {#if f.status === 'error' && f.error}
+          <p class="m-0 mt-1 text-caption text-red-400">{f.error}</p>
+        {/if}
+        {#if expanded === i && f.status === 'done'}
+          <div class="mt-3 grid gap-3 border-t border-hairline pt-3 sm:grid-cols-2">
+            <div>
+              <p class="m-0 mb-1 text-caption text-ink-tertiary">Original</p>
+              <audio class="w-full" controls preload="none" src={jobFileUrl(job.id, i, 'in')}></audio>
+            </div>
+            <div>
+              <p class="m-0 mb-1 text-caption text-ink-tertiary">Enhanced</p>
+              <audio class="w-full" controls preload="none" src={jobFileUrl(job.id, i, 'out')}></audio>
+            </div>
+          </div>
+        {/if}
+      </li>
+    {/each}
+  </ul>
+</section>
