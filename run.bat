@@ -1,8 +1,6 @@
 @echo off
 cd /d "%~dp0"
-if not exist "app\ui\dist\index.html" (
-  echo Building UI...
-  call pnpm --dir app/ui build
-)
-".venv\Scripts\python.exe" start.py
-pause
+echo Starting API on http://127.0.0.1:8765 ...
+start "Meowless API" cmd /k ".venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8765"
+echo Starting UI dev server (HMR) on http://127.0.0.1:5173 ...
+start "Meowless UI" cmd /k "pnpm --dir app/ui dev --open"
