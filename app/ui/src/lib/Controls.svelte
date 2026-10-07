@@ -33,5 +33,5 @@
     {disabled}
     class="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary disabled:opacity-50"
   />
-  <span>Extra post-filter — over-attenuate very noisy parts</span>
+  <span>Extra post-filter - over-attenuate very noisy parts</span>
 </label>
