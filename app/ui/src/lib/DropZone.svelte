@@ -19,7 +19,7 @@
   let problems = $state<string[]>([])
   let input: HTMLInputElement
 
-  const FALLBACK_EXTS = ['wav', 'mp3', 'flac', 'ogg', 'opus']
+  const FALLBACK_EXTS = ['wav', 'mp3', 'flac', 'ogg', 'opus', 'mp4', 'mov', 'mkv', 'webm', 'avi', 'm4v']
 
   function mb(bytes: number): string {
     return bytes >= 1024 * 1024
@@ -95,7 +95,7 @@
     }}
   />
   <p class="m-0 text-body">
-    <strong class="font-medium text-ink">Drop audio files</strong>
+    <strong class="font-medium text-ink">Drop audio or video files</strong>
     <span class="text-ink-tertiary"> or </span>
     <button
       type="button"
@@ -111,7 +111,7 @@
   <p class="m-0 mt-1 text-caption text-ink-tertiary">
     {limits
       ? `Up to ${limits.max_files} files · ${limits.max_file_mb} MB each · ${limits.allowed_exts.join(', ')}`
-      : 'WAV, MP3, FLAC, OGG, OPUS'}
+      : 'WAV, MP3, FLAC, OGG, OPUS, MP4, MOV, MKV, WEBM, AVI, M4V'}
   </p>
 
   {#if problems.length}

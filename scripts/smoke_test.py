@@ -11,7 +11,10 @@ Run from the project root:
 
 import io
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -35,6 +38,31 @@ def make_wav(sr: int, duration: float, channels: int) -> bytes:
     return buf.getvalue()
 
 
+def make_video(*, audio: bool = True) -> bytes:
+    """Render a tiny mp4 (with or without an audio track) via ffmpeg."""
+    with tempfile.TemporaryDirectory() as td:
+        out = os.path.join(td, "clip.mp4")
+        cmd = ["ffmpeg", "-y", "-nostdin"]
+        if audio:
+            wav = os.path.join(td, "in.wav")
+            with open(wav, "wb") as f:
+                f.write(make_wav(44100, 2.0, 1))
+            cmd += ["-i", wav, "-c:a", "aac", out]
+        else:
+            cmd += [
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=64x64:d=1",
+                "-c:v",
+                "mpeg4",
+                out,
+            ]
+        subprocess.run(cmd, check=True, capture_output=True)
+        with open(out, "rb") as f:
+            return f.read()
+
+
 def wait_for_job(client, job_id: str, timeout: float = 180.0) -> dict:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -46,10 +74,18 @@ def wait_for_job(client, job_id: str, timeout: float = 180.0) -> dict:
 
 
 def expect_reject(client, *, files=None, data=None, why: str = "") -> None:
-    resp = client.post("/api/jobs", files=files or [("files", ("a.wav", make_wav(44100, 0.5, 1), "audio/wav"))], data=data or {})
-    assert resp.status_code == 400, f"{why}: expected 400, got {resp.status_code}: {resp.text[:300]}"
+    resp = client.post(
+        "/api/jobs",
+        files=files or [("files", ("a.wav", make_wav(44100, 0.5, 1), "audio/wav"))],
+        data=data or {},
+    )
+    assert resp.status_code == 400, (
+        f"{why}: expected 400, got {resp.status_code}: {resp.text[:300]}"
+    )
     detail = resp.json()["detail"]
-    assert isinstance(detail, dict) and detail.get("errors"), f"{why}: no errors list: {detail}"
+    assert isinstance(detail, dict) and detail.get("errors"), (
+        f"{why}: no errors list: {detail}"
+    )
     print(f"  rejected as expected ({why}): {detail['message']}")
 
 
@@ -58,7 +94,7 @@ def main() -> None:
         health = client.get("/api/health").json()
         assert health["status"] == "ok"
         limits = health["limits"]
-        assert limits["max_files"] == 10 and limits["max_file_mb"] == 100
+        assert limits["max_files"] == 10 and limits["max_file_mb"] == 5120
         print("health OK, limits:", limits)
 
         clips = [
@@ -76,14 +112,18 @@ def main() -> None:
         print(f"job {job_id} accepted")
 
         job = wait_for_job(client, job_id)
-        assert job["status"] == "done", f"job status {job['status']}: {[f.get('error') for f in job['files']]}"
+        assert job["status"] == "done", (
+            f"job status {job['status']}: {[f.get('error') for f in job['files']]}"
+        )
         print(f"job done in poll loop, status={job['status']}")
 
         for i, (name, original) in enumerate(clips):
             entry = job["files"][i]
             assert entry["status"] == "done", entry
             src_sr = sf.info(io.BytesIO(original)).samplerate
-            result = client.get(f"/api/jobs/{job_id}/files/{i}", params={"which": "out"})
+            result = client.get(
+                f"/api/jobs/{job_id}/files/{i}", params={"which": "out"}
+            )
             assert result.status_code == 200, result.status_code
             out, out_sr = sf.read(io.BytesIO(result.content))
             info = sf.info(io.BytesIO(result.content))
@@ -92,14 +132,22 @@ def main() -> None:
             orig, _ = sf.read(io.BytesIO(original))
             in_rms = float(np.sqrt((orig.astype(np.float64) ** 2).mean()))
             out_rms = float(np.sqrt((out.astype(np.float64) ** 2).mean()))
-            assert out_rms < in_rms, f"{name}: denoising did not reduce energy ({out_rms:.5f} >= {in_rms:.5f})"
-            print(f"  {name}: sr={out_sr} preserved, 24-bit, rms {in_rms:.4f} -> {out_rms:.4f}")
+            assert out_rms < in_rms, (
+                f"{name}: denoising did not reduce energy ({out_rms:.5f} >= {in_rms:.5f})"
+            )
+            print(
+                f"  {name}: sr={out_sr} preserved, 24-bit, rms {in_rms:.4f} -> {out_rms:.4f}"
+            )
 
-            original_resp = client.get(f"/api/jobs/{job_id}/files/{i}", params={"which": "in"})
+            original_resp = client.get(
+                f"/api/jobs/{job_id}/files/{i}", params={"which": "in"}
+            )
             assert original_resp.status_code == 200
 
         zip_resp = client.get(f"/api/jobs/{job_id}/zip")
-        assert zip_resp.status_code == 200 and zip_resp.content[:2] == b"PK", "zip download failed"
+        assert zip_resp.status_code == 200 and zip_resp.content[:2] == b"PK", (
+            "zip download failed"
+        )
         import zipfile as zf
 
         names = zf.ZipFile(io.BytesIO(zip_resp.content)).namelist()
@@ -118,10 +166,32 @@ def main() -> None:
         print("single-file job OK")
         client.delete(f"/api/jobs/{single['id']}")
 
+        if shutil.which("ffmpeg") and shutil.which("ffprobe"):
+            resp = client.post(
+                "/api/jobs",
+                files=[("files", ("clip.mp4", make_video(), "video/mp4"))],
+                data={"atten_lim_db": "50"},
+            )
+            assert resp.status_code == 202, resp.text
+            vid = wait_for_job(client, resp.json()["job_id"])
+            assert vid["status"] == "done", [f.get("error") for f in vid["files"]]
+            result = client.get(
+                f"/api/jobs/{vid['id']}/files/0", params={"which": "out"}
+            )
+            assert result.status_code == 200
+            info = sf.info(io.BytesIO(result.content))
+            assert info.samplerate == 44100 and info.subtype == "PCM_24", info
+            print(f"video job OK: cleaned audio sr={info.samplerate}, {info.subtype}")
+            client.delete(f"/api/jobs/{vid['id']}")
+        else:
+            print("skipping video job: ffmpeg/ffprobe not on PATH")
+
         print("validation checks:")
         expect_reject(
             client,
-            files=[("files", ("fake.wav", b"this is definitely not audio", "audio/wav"))],
+            files=[
+                ("files", ("fake.wav", b"this is definitely not audio", "audio/wav"))
+            ],
             why="garbage bytes as .wav",
         )
         expect_reject(
@@ -131,13 +201,26 @@ def main() -> None:
         )
         expect_reject(
             client,
-            files=[("files", (f"x{i}.wav", make_wav(44100, 0.2, 1), "audio/wav")) for i in range(11)],
+            files=[
+                ("files", (f"x{i}.wav", make_wav(44100, 0.2, 1), "audio/wav"))
+                for i in range(11)
+            ],
             why="11 files",
         )
         expect_reject(client, data={"atten_lim_db": "200"}, why="atten out of range")
 
+        if shutil.which("ffmpeg") and shutil.which("ffprobe"):
+            expect_reject(
+                client,
+                files=[("files", ("silent.mp4", make_video(audio=False), "video/mp4"))],
+                why="video with no audio track",
+            )
+
         assert client.get("/api/jobs/not-a-uuid").status_code == 404
-        assert client.get("/api/jobs/00000000-0000-0000-0000-000000000000").status_code == 404
+        assert (
+            client.get("/api/jobs/00000000-0000-0000-0000-000000000000").status_code
+            == 404
+        )
         print("  job-id traversal/unknown ids -> 404")
 
         resp = client.delete(f"/api/jobs/{job_id}")

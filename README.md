@@ -8,6 +8,8 @@ your machine — recordings are never uploaded anywhere.
 
 - **Denoise one audio file** — drag & drop, or browse, and download the cleaned
   WAV
+- **Video input** — drop an `mp4`, `mov`, `mkv`, `webm`, `avi`, or `m4v` and get
+  the cleaned audio track back as WAV (the video track is not returned)
 - **Noise reduction strength** slider (maps to DeepFilterNet's attenuation limit)
 - Optional post-filter for extra suppression on very noisy parts
 - A/B compare original vs enhanced
@@ -17,6 +19,7 @@ your machine — recordings are never uploaded anywhere.
 
 - Python 3.11 (already set up in `.venv`)
 - Node.js + pnpm (build-time only — not needed to run the app)
+- `ffmpeg` on your `PATH` (required only for video input)
 
 ## Setup
 

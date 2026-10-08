@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /srv
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libsndfile1 git \
+    && apt-get install -y --no-install-recommends libsndfile1 git ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./

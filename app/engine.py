@@ -1,6 +1,10 @@
 """DeepFilterNet engine: header validation plus a file-to-file pipeline."""
 
+import json
 import os
+import shutil
+import subprocess
+import tempfile
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -25,6 +29,95 @@ class AudioError(Exception):
     """A user-facing validation or decoding failure (message is safe to show)."""
 
 
+def _is_video(path: str) -> bool:
+    return os.path.splitext(path)[1].lower() in limits.VIDEO_EXTS
+
+
+def _duration_limit_label() -> str:
+    h, m = divmod(limits.MAX_DURATION_S // 60, 60)
+    return f"{h}h {m}m" if h and m else (f"{h}h" if h else f"{m} minutes")
+
+
+def _ffmpeg(name: str = "ffmpeg") -> str:
+    exe = shutil.which(name)
+    if not exe:
+        raise AudioError(
+            f"video support requires {name}, which was not found on this machine"
+        )
+    return exe
+
+
+def _probe_video(path: str) -> dict:
+    """Validate a video's audio stream via ffprobe (no decode)."""
+    ffprobe = _ffmpeg("ffprobe")
+    cmd = [
+        ffprobe,
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=sample_rate,channels:format=duration",
+        "-of",
+        "json",
+        path,
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        data = json.loads(proc.stdout or "{}")
+    except (OSError, ValueError):
+        raise AudioError("could not read video file")
+    streams = data.get("streams") or []
+    if not streams:
+        raise AudioError("contains no audio track")
+    stream = streams[0]
+    try:
+        sample_rate = int(stream["sample_rate"])
+        channels = int(stream["channels"])
+        duration = float((data.get("format") or {}).get("duration"))
+    except (KeyError, TypeError, ValueError):
+        raise AudioError("could not read the audio track")
+    if sample_rate <= 0 or duration <= 0:
+        raise AudioError("contains no audio data")
+    if not limits.MIN_SAMPLE_RATE <= sample_rate <= limits.MAX_SAMPLE_RATE:
+        raise AudioError(f"unsupported sample rate {sample_rate} Hz")
+    if channels > limits.MAX_CHANNELS:
+        raise AudioError(f"{channels} channels not supported (mono or stereo only)")
+    if duration > limits.MAX_DURATION_S:
+        raise AudioError(f"longer than {_duration_limit_label()}")
+    return {
+        "sample_rate": sample_rate,
+        "num_frames": int(duration * sample_rate),
+        "channels": channels,
+        "duration": duration,
+    }
+
+
+def _extract_audio(src: str, tmp_dir: str) -> str:
+    """Extract a video's audio track to a temporary WAV for the normal pipeline."""
+    dst = os.path.join(tmp_dir, "audio.wav")
+    cmd = [
+        _ffmpeg(),
+        "-y",
+        "-nostdin",
+        "-i",
+        src,
+        "-vn",
+        "-map",
+        "0:a:0",
+        "-c:a",
+        "pcm_s24le",
+        dst,
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+    except OSError:
+        raise AudioError("could not extract audio from video")
+    if proc.returncode != 0 or not os.path.isfile(dst):
+        raise AudioError("could not extract audio from video")
+    return dst
+
+
 def _get_model(post_filter: bool):
     if post_filter not in _models:
         model, df_state, suffix = init_df(
@@ -46,6 +139,8 @@ def probe(path: str) -> dict:
     actually *is*: decodable, sane sample rate/channels, within the duration
     cap. Header values can still lie, so process_file re-checks after decode.
     """
+    if _is_video(path):
+        return _probe_video(path)
     try:
         info = ta.info(path)
     except Exception:
@@ -62,20 +157,32 @@ def probe(path: str) -> dict:
     duration = frames / sample_rate
     if duration > limits.MAX_DURATION_S:
         raise AudioError(f"longer than {limits.MAX_DURATION_S // 60} minutes")
-    return {"sample_rate": sample_rate, "num_frames": frames, "channels": channels, "duration": duration}
+    return {
+        "sample_rate": sample_rate,
+        "num_frames": frames,
+        "channels": channels,
+        "duration": duration,
+    }
 
 
 def process_file(src: str, dst: str, settings: dict) -> None:
     """Denoise one file into a 24-bit WAV, preserving the source sample rate."""
-    audio, info = load_audio(src, sr=SR)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        if _is_video(src):
+            src = _extract_audio(src, tmp_dir)
+        audio, info = load_audio(src, sr=SR)
     src_sr = int(info.sample_rate)
     if audio.shape[-1] > limits.MAX_DURATION_S * SR:
-        raise AudioError(f"longer than {limits.MAX_DURATION_S // 60} minutes")
+        raise AudioError(f"longer than {_duration_limit_label()}")
 
     model, df_state, _ = _get_model(bool(settings["post_filter"]))
     with torch.inference_mode():
         out = enhance(
-            model, df_state, audio, pad=True, atten_lim_db=float(settings["atten_lim_db"])
+            model,
+            df_state,
+            audio,
+            pad=True,
+            atten_lim_db=float(settings["atten_lim_db"]),
         )
     out = out.to(torch.float32)
 
