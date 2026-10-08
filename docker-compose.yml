@@ -18,7 +18,9 @@ services:
     build:
       context: ./app/ui
       dockerfile: Dockerfile.dev
-    command: pnpm dev
+    # Re-install into the named volume on every start so it stays in sync with
+    # package.json (a stale volume shadows the image's node_modules).
+    command: sh -c "pnpm install --frozen-lockfile && pnpm dev"
     environment:
       VITE_API_PROXY: http://api:8765
       CHOKIDAR_USEPOLLING: "true"
