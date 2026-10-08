@@ -107,5 +107,8 @@ docker-compose.prod.yml  Production stack
 ## Notes
 
 - The strength slider: 0 dB = no change, 100 dB = maximum suppression.
+- Very quiet recordings (common in camera/video audio) are automatically boosted
+  to a usable level before denoising — otherwise the model treats them as
+  silence. Loud inputs are left untouched.
 - DeepFilterNet processes at 48 kHz internally; Meowless resamples back to the
   source rate and writes a 24-bit WAV.

@@ -21,6 +21,11 @@ from . import limits
 SR = 48000
 _models = {}
 
+# Quiet recordings (e.g. camera video) read as silence to the model, which then
+# suppresses everything. Boost such inputs to a usable level; never attenuate.
+TARGET_RMS_DB = -18.0
+_PEAK_CEILING = 0.99
+
 # Use every core; PyTorch is the only heavy user in this process.
 torch.set_num_threads(os.cpu_count() or 1)
 
@@ -118,6 +123,17 @@ def _extract_audio(src: str, tmp_dir: str) -> str:
     return dst
 
 
+def _level_input(audio):
+    """Boost a quiet input toward TARGET_RMS_DB so the model has signal to work with."""
+    rms = float(audio.pow(2).mean().sqrt())
+    peak = float(audio.abs().max())
+    if rms <= 1e-6 or peak <= 1e-6:
+        return audio
+    gain = 10.0 ** (TARGET_RMS_DB / 20.0) / rms
+    gain = min(max(gain, 1.0), _PEAK_CEILING / peak)
+    return audio * gain if gain != 1.0 else audio
+
+
 def _get_model(post_filter: bool):
     if post_filter not in _models:
         model, df_state, suffix = init_df(
@@ -171,6 +187,7 @@ def process_file(src: str, dst: str, settings: dict) -> None:
         if _is_video(src):
             src = _extract_audio(src, tmp_dir)
         audio, info = load_audio(src, sr=SR)
+    audio = _level_input(audio)
     src_sr = int(info.sample_rate)
     if audio.shape[-1] > limits.MAX_DURATION_S * SR:
         raise AudioError(f"longer than {_duration_limit_label()}")
