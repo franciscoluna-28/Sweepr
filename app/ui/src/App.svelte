@@ -3,6 +3,7 @@
   import Controls from './lib/Controls.svelte'
   import DropZone from './lib/DropZone.svelte'
   import JobPanel from './lib/JobPanel.svelte'
+  import Logo from './lib/Logo.svelte'
   import {
     createJob,
     deleteJob,
@@ -95,7 +96,7 @@
 
 <main class="container-content py-10 sm:py-14">
   <header class="mb-6">
-    <h1 class="m-0 text-headline">Meowless</h1>
+    <h1 class="m-0"><Logo /></h1>
     <p class="m-0 mt-1 text-body-sm text-ink-subtle">
       Clean noisy audio locally. Your files never leave this machine.{#if online === false}
         <span class="text-ink-tertiary"> Backend offline.</span>{/if}
