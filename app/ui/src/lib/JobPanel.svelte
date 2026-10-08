@@ -1,4 +1,11 @@
 <script lang="ts">
+  import {
+    Check,
+    Circle,
+    Download,
+    LoaderCircle,
+    X,
+  } from '@lucide/svelte'
   import { isActive, jobFileUrl, jobZipUrl, type Job } from './api'
 
   let { job, onclear }: { job: Job; onclear: () => void } = $props()
@@ -38,19 +45,6 @@
     const s = remaining % 60
     return m > 0 ? `~${m}m ${s}s left` : `~${s}s left`
   })
-
-  function badge(status: string): string {
-    switch (status) {
-      case 'done':
-        return 'text-success'
-      case 'error':
-        return 'text-red-400'
-      case 'processing':
-        return 'text-primary'
-      default:
-        return 'text-ink-tertiary'
-    }
-  }
 </script>
 
 <section class="panel p-4 sm:p-5">
@@ -92,11 +86,17 @@
     {#each job.files as f, i}
       <li class="rounded-md bg-surface-2 px-3 py-2">
         <div class="flex items-center justify-between gap-3">
-          <span class="min-w-0 truncate text-body-sm text-ink-muted">
-            <span class="mr-2 font-mono {badge(f.status)}">
-              {#if f.status === 'done'}✓{:else if f.status === 'error'}✗{:else if f.status === 'processing'}●{:else}○{/if}
-            </span>
-            {f.name}
+          <span class="flex min-w-0 items-center gap-2 text-body-sm text-ink-muted">
+            {#if f.status === 'done'}
+              <Check class="size-4 shrink-0 text-success" aria-hidden="true" />
+            {:else if f.status === 'error'}
+              <X class="size-4 shrink-0 text-red-400" aria-hidden="true" />
+            {:else if f.status === 'processing'}
+              <LoaderCircle class="size-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
+            {:else}
+              <Circle class="size-4 shrink-0 text-ink-tertiary" aria-hidden="true" />
+            {/if}
+            <span class="truncate">{f.name}</span>
           </span>
           <span class="flex shrink-0 items-center gap-3">
             {#if f.status === 'done'}
@@ -108,11 +108,13 @@
                 {expanded === i ? 'Hide A/B' : 'A/B'}
               </button>
               <a
-                class="text-caption text-primary underline underline-offset-2 hover:text-primary-hover"
+                class="inline-flex text-primary transition-colors hover:text-primary-hover"
                 href={jobFileUrl(job.id, i, 'out')}
                 download
+                title="Download enhanced audio"
+                aria-label="Download enhanced audio"
               >
-                Download
+                <Download class="size-4" aria-hidden="true" />
               </a>
             {:else if f.status === 'processing'}
               <span class="text-caption text-primary">working…</span>
