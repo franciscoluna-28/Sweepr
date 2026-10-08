@@ -27,11 +27,11 @@
       case 'running':
         return `Processing ${Math.min(settled + 1, total)} of ${total}…`
       case 'done':
-        return `Done — ${doneCount} file${doneCount === 1 ? '' : 's'} ready`
+        return `Finished - ${doneCount} file${doneCount === 1 ? '' : 's'} ready`
       case 'done_with_errors':
-        return `Finished — ${doneCount} ok, ${errorCount} failed`
+        return `Finished - ${doneCount} ok, ${errorCount} failed`
       case 'interrupted':
-        return 'Interrupted — the server restarted mid-job'
+        return 'Interrupted - the server restarted mid-job'
       default:
         return job.status
     }
