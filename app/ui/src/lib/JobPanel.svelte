@@ -6,6 +6,7 @@
     LoaderCircle,
     X,
   } from '@lucide/svelte'
+  import AbCompare from './AbCompare.svelte'
   import { isActive, jobFileUrl, jobZipUrl, type Job } from './api'
 
   let { job, onclear }: { job: Job; onclear: () => void } = $props()
@@ -102,10 +103,15 @@
             {#if f.status === 'done'}
               <button
                 type="button"
-                class="cursor-pointer border-none bg-transparent p-0 text-caption text-ink-tertiary underline underline-offset-2 hover:text-ink"
+                class="inline-flex cursor-pointer items-center rounded-sm border-none bg-transparent p-1 transition-colors hover:text-ink {expanded === i
+                  ? 'text-primary'
+                  : 'text-ink-tertiary'}"
+                title={expanded === i ? 'Hide A/B comparison' : 'Compare original and enhanced'}
+                aria-label={expanded === i ? 'Hide A/B comparison' : 'Compare original and enhanced'}
+                aria-expanded={expanded === i}
                 onclick={() => (expanded = expanded === i ? null : i)}
               >
-                {expanded === i ? 'Hide A/B' : 'A/B'}
+                <AbCompare class="size-[18px]" />
               </button>
               <a
                 class="inline-flex text-primary transition-colors hover:text-primary-hover"
