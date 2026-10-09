@@ -20,4 +20,4 @@ RUN pip install --upgrade pip \
 COPY . .
 
 EXPOSE 8765
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8765", "--reload"]
+CMD exec uvicorn app.main:app --host 0.0.0.0 --port "${MEOWLESS_PORT:-${PORT:-8765}}" --reload

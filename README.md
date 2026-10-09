@@ -79,6 +79,34 @@ docker compose -f docker-compose.prod.yml up --build
 Builds the UI in a Node stage, then serves it (plus the API) from one Python
 container on http://localhost:8765.
 
+## Configuration
+
+Limits are enforced server-side and mirrored to the UI via `/api/health`. Every
+value below can be overridden with an environment variable; invalid values make
+the app fail fast at startup with a message naming the variable.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `MEOWLESS_MAX_FILES` | `10` | Files per batch job |
+| `MEOWLESS_MAX_FILE_BYTES` | `5G` | Per-file size cap |
+| `MEOWLESS_MAX_TOTAL_BYTES` | `10G` | Per-job total upload cap (≥ per-file cap) |
+| `MEOWLESS_MAX_DURATION_S` | `14400` | Max media duration in seconds |
+| `MEOWLESS_MAX_WAITING_JOBS` | `3` | Jobs allowed to wait in the queue |
+| `MEOWLESS_RETENTION_DAYS` | `7` | Days before finished jobs are pruned |
+| `MEOWLESS_JOBS_DIR` | `app/data/jobs` | Job storage dir (point at a mounted volume in the cloud) |
+| `MEOWLESS_PORT` | `8765` | HTTP port (falls back to platform `PORT`, e.g. Cloud Run / Fly) |
+
+Byte sizes accept plain integers (bytes) or human suffixes: `5120M`, `5G`, `5GiB`.
+
+Format allowlists (extensions, sample rates, channels) are intentionally not
+configurable.
+
+Example (docker compose reads `MEOWLESS_PORT` from your shell or `.env`):
+
+```
+MEOWLESS_PORT=9000 MEOWLESS_MAX_FILES=2 docker compose -f docker-compose.prod.yml up --build
+```
+
 ## How the UI talks to the server
 
 In production it's one process and one origin: FastAPI serves the built UI and

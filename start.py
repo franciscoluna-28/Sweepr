@@ -3,8 +3,9 @@ import webbrowser
 
 import uvicorn
 
+from app.limits import PORT
+
 HOST = "127.0.0.1"
-PORT = 8765
 
 
 def open_browser():
