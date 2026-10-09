@@ -10,6 +10,7 @@ Run from the project root:
 """
 
 import io
+import json
 import os
 import shutil
 import subprocess
@@ -47,7 +48,24 @@ def make_video(*, audio: bool = True) -> bytes:
             wav = os.path.join(td, "in.wav")
             with open(wav, "wb") as f:
                 f.write(make_wav(44100, 2.0, 1))
-            cmd += ["-i", wav, "-c:a", "aac", out]
+            cmd += [
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=64x64:d=2",
+                "-i",
+                wav,
+                "-map",
+                "0:v:0",
+                "-map",
+                "1:a:0",
+                "-c:v",
+                "mpeg4",
+                "-c:a",
+                "aac",
+                "-shortest",
+                out,
+            ]
         else:
             cmd += [
                 "-f",
@@ -182,6 +200,45 @@ def main() -> None:
             info = sf.info(io.BytesIO(result.content))
             assert info.samplerate == 44100 and info.subtype == "PCM_24", info
             print(f"video job OK: cleaned audio sr={info.samplerate}, {info.subtype}")
+
+            entry = vid["files"][0]
+            assert entry.get("video"), entry
+            muxed = client.get(
+                f"/api/jobs/{vid['id']}/files/0", params={"which": "video"}
+            )
+            assert muxed.status_code == 200, muxed.status_code
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tf:
+                tf.write(muxed.content)
+                muxed_path = tf.name
+            try:
+                probe = subprocess.run(
+                    [
+                        "ffprobe",
+                        "-v",
+                        "error",
+                        "-show_entries",
+                        "stream=codec_type",
+                        "-of",
+                        "json",
+                        muxed_path,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+            finally:
+                os.remove(muxed_path)
+            kinds = [s["codec_type"] for s in json.loads(probe.stdout)["streams"]]
+            assert kinds.count("video") == 1 and kinds.count("audio") == 1, kinds
+            print(f"video output OK: muxed streams={kinds}")
+
+            vid_zip = client.get(f"/api/jobs/{vid['id']}/zip")
+            assert vid_zip.status_code == 200
+            vid_names = zf.ZipFile(io.BytesIO(vid_zip.content)).namelist()
+            assert (
+                "clip_enhanced.wav" in vid_names and "clip_enhanced.mp4" in vid_names
+            ), vid_names
+            print(f"video zip OK: {vid_names}")
             client.delete(f"/api/jobs/{vid['id']}")
         else:
             print("skipping video job: ffmpeg/ffprobe not on PATH")

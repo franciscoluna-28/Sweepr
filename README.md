@@ -9,7 +9,8 @@ your machine — recordings are never uploaded anywhere.
 - **Denoise one audio file** — drag & drop, or browse, and download the cleaned
   WAV
 - **Video input** — drop an `mp4`, `mov`, `mkv`, `webm`, `avi`, or `m4v` and get
-  the cleaned audio track back as WAV (the video track is not returned)
+  the video back with the cleaned audio muxed in (video stream copied, audio
+  re-encoded). The enhanced audio track is still available as WAV
 - **Noise reduction strength** slider (maps to DeepFilterNet's attenuation limit)
 - Optional post-filter for extra suppression on very noisy parts
 - A/B compare original vs enhanced

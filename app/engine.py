@@ -34,8 +34,17 @@ class AudioError(Exception):
     """A user-facing validation or decoding failure (message is safe to show)."""
 
 
+# Containers that can stream-copy into MP4 are kept as MP4; everything else
+# (vp8/vp9 in webm, exotic avi codecs) goes into MKV, which accepts any codec.
+_MP4_EXTS = {".mp4", ".mov", ".m4v"}
+
+
 def _is_video(path: str) -> bool:
     return os.path.splitext(path)[1].lower() in limits.VIDEO_EXTS
+
+
+def _video_out_ext(src: str) -> str:
+    return ".mp4" if os.path.splitext(src)[1].lower() in _MP4_EXTS else ".mkv"
 
 
 def _duration_limit_label() -> str:
@@ -98,6 +107,29 @@ def _probe_video(path: str) -> dict:
     }
 
 
+def _has_video_stream(path: str) -> bool:
+    """True only if the file actually carries a video stream (muxing needs one)."""
+    ffprobe = _ffmpeg("ffprobe")
+    cmd = [
+        ffprobe,
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=codec_type",
+        "-of",
+        "json",
+        path,
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        data = json.loads(proc.stdout or "{}")
+    except (OSError, ValueError):
+        return False
+    return bool(data.get("streams"))
+
+
 def _extract_audio(src: str, tmp_dir: str) -> str:
     """Extract a video's audio track to a temporary WAV for the normal pipeline."""
     dst = os.path.join(tmp_dir, "audio.wav")
@@ -121,6 +153,39 @@ def _extract_audio(src: str, tmp_dir: str) -> str:
     if proc.returncode != 0 or not os.path.isfile(dst):
         raise AudioError("could not extract audio from video")
     return dst
+
+
+def _mux_video(video_src: str, enhanced_wav: str, dst: str) -> None:
+    """Copy the original video stream and replace its audio with the enhanced WAV."""
+    cmd = [
+        _ffmpeg(),
+        "-y",
+        "-nostdin",
+        "-i",
+        video_src,
+        "-i",
+        enhanced_wav,
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-shortest",
+    ]
+    if dst.lower().endswith(".mp4"):
+        cmd += ["-movflags", "+faststart"]
+    cmd += [dst]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+    except OSError:
+        raise AudioError("could not write the video with enhanced audio")
+    if proc.returncode != 0 or not os.path.isfile(dst):
+        raise AudioError("could not write the video with enhanced audio")
 
 
 def _level_input(audio):
@@ -181,12 +246,17 @@ def probe(path: str) -> dict:
     }
 
 
-def process_file(src: str, dst: str, settings: dict) -> None:
-    """Denoise one file into a 24-bit WAV, preserving the source sample rate."""
+def process_file(src: str, dst: str, settings: dict) -> str | None:
+    """Denoise one file into a 24-bit WAV, preserving the source sample rate.
+
+    For video inputs, also mux the enhanced audio back onto the original video
+    track (stream-copied) and return that file's path; otherwise return None.
+    """
+    original = src
+    is_video = _is_video(original)
     with tempfile.TemporaryDirectory() as tmp_dir:
-        if _is_video(src):
-            src = _extract_audio(src, tmp_dir)
-        audio, info = load_audio(src, sr=SR)
+        audio_src = _extract_audio(src, tmp_dir) if is_video else src
+        audio, info = load_audio(audio_src, sr=SR)
     audio = _level_input(audio)
     src_sr = int(info.sample_rate)
     if audio.shape[-1] > limits.MAX_DURATION_S * SR:
@@ -208,3 +278,11 @@ def process_file(src: str, dst: str, settings: dict) -> None:
     samples = np.ascontiguousarray(out.numpy().T)
     np.clip(samples, -1.0, 1.0, out=samples)
     sf.write(dst, samples, src_sr, format="WAV", subtype="PCM_24")
+
+    if not is_video:
+        return None
+    if not _has_video_stream(original):
+        return None
+    video_dst = os.path.splitext(dst)[0] + _video_out_ext(original)
+    _mux_video(original, dst, video_dst)
+    return video_dst

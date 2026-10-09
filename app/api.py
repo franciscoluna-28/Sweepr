@@ -37,7 +37,9 @@ def _require_valid(job_id: str) -> dict:
 
 def _safe_name(raw: str | None, fallback: str) -> str:
     name = (raw or "").replace("\\", "/").split("/")[-1]
-    name = "".join(ch if ch.isprintable() and ch not in '<>:"|?*' else "_" for ch in name)
+    name = "".join(
+        ch if ch.isprintable() and ch not in '<>:"|?*' else "_" for ch in name
+    )
     name = name.strip(" .")
     return name[:120] or fallback
 
@@ -52,7 +54,9 @@ async def _save(upload: UploadFile, dest, total_so_far: int) -> int:
             if written > limits.MAX_FILE_BYTES:
                 raise _TooLarge(f"larger than {limits.MAX_FILE_BYTES // 1048576} MB")
             if written > remaining:
-                raise _TooLarge(f"job exceeds {limits.MAX_TOTAL_BYTES // 1048576} MB in total")
+                raise _TooLarge(
+                    f"job exceeds {limits.MAX_TOTAL_BYTES // 1048576} MB in total"
+                )
             out.write(chunk)
     return written
 
@@ -125,6 +129,7 @@ async def create_job(
                     "stored": stored,
                     "status": "queued",
                     "error": None,
+                    "video": None,
                 }
             )
         if errors:
@@ -160,20 +165,31 @@ def get_job(job_id: str):
     return _require_valid(job_id)
 
 
-@router.get("/jobs/{job_id}/files/{index}", summary="Original or result WAV")
-def get_file(job_id: str, index: int, which: Literal["in", "out"] = "in"):
+@router.get(
+    "/jobs/{job_id}/files/{index}",
+    summary="Original, enhanced WAV, or muxed video",
+)
+def get_file(job_id: str, index: int, which: Literal["in", "out", "video"] = "in"):
     job = _require_valid(job_id)
     if not 0 <= index < len(job["files"]):
         raise HTTPException(404, "file not found")
     entry = job["files"][index]
+    stem = os.path.splitext(entry["name"])[0]
     if which == "in":
         path = jobs.job_dir(job_id) / entry["stored"]
         name = entry["name"]
     else:
         if entry["status"] != "done":
             raise HTTPException(404, "result not ready")
-        path = jobs.job_dir(job_id) / "out" / f"{index:02d}.wav"
-        name = os.path.splitext(entry["name"])[0] + "_enhanced.wav"
+        if which == "video":
+            stored = entry.get("video")
+            if not stored:
+                raise HTTPException(404, "no video output for this file")
+            path = jobs.job_dir(job_id) / stored
+            name = stem + "_enhanced" + os.path.splitext(stored)[1]
+        else:
+            path = jobs.job_dir(job_id) / "out" / f"{index:02d}.wav"
+            name = stem + "_enhanced.wav"
     if not path.is_file():
         raise HTTPException(404, "file not found")
     media = mimetypes.guess_type(name)[0] or (
@@ -191,17 +207,36 @@ def download_zip(job_id: str):
     fd, tmp_path = tempfile.mkstemp(suffix=".zip")
     os.close(fd)
     used: set[str] = set()
+
+    def add(zf: zipfile.ZipFile, path, base: str, ext: str, suffix: str = "") -> None:
+        arc = f"{base}{suffix}{ext}"
+        n = 2
+        while arc in used:
+            arc = f"{base}{suffix} ({n}){ext}"
+            n += 1
+        used.add(arc)
+        zf.write(path, arcname=arc)
+
     try:
         with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_STORED) as zf:
             for i, f in done:
                 stem = os.path.splitext(f["name"])[0] or "audio"
-                arc = f"{stem}_enhanced.wav"
-                n = 2
-                while arc in used:
-                    arc = f"{stem}_enhanced ({n}).wav"
-                    n += 1
-                used.add(arc)
-                zf.write(jobs.job_dir(job_id) / "out" / f"{i:02d}.wav", arcname=arc)
+                add(
+                    zf,
+                    jobs.job_dir(job_id) / "out" / f"{i:02d}.wav",
+                    stem,
+                    ".wav",
+                    "_enhanced",
+                )
+                stored = f.get("video")
+                if stored:
+                    add(
+                        zf,
+                        jobs.job_dir(job_id) / stored,
+                        stem,
+                        os.path.splitext(stored)[1],
+                        "_enhanced",
+                    )
     except BaseException:
         os.remove(tmp_path)
         raise
@@ -218,7 +253,9 @@ def delete_job(job_id: str):
     job = _require_valid(job_id)
     if jobs.request_delete(job_id, job["status"]) == "cancelling":
         return Response(
-            content='{"status": "cancelling"}', status_code=202, media_type="application/json"
+            content='{"status": "cancelling"}',
+            status_code=202,
+            media_type="application/json",
         )
     return Response(status_code=204)
 
