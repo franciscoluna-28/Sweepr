@@ -34,6 +34,7 @@ export interface JobFile {
   stored: string
   status: FileStatus
   error: string | null
+  video: string | null
 }
 
 export interface Job {
@@ -101,7 +102,7 @@ export async function deleteJob(id: string): Promise<void> {
   if (!res.ok && res.status !== 404) throw await errorFrom(res)
 }
 
-export function jobFileUrl(id: string, index: number, which: 'in' | 'out'): string {
+export function jobFileUrl(id: string, index: number, which: 'in' | 'out' | 'video'): string {
   return `/api/jobs/${id}/files/${index}?which=${which}`
 }
 

@@ -3,6 +3,7 @@
     Check,
     Circle,
     Download,
+    Film,
     LoaderCircle,
     X,
   } from '@lucide/svelte'
@@ -113,15 +114,36 @@
               >
                 <AbCompare class="size-[18px]" />
               </button>
-              <a
-                class="inline-flex text-primary transition-colors hover:text-primary-hover"
-                href={jobFileUrl(job.id, i, 'out')}
-                download
-                title="Download enhanced audio"
-                aria-label="Download enhanced audio"
-              >
-                <Download class="size-4" aria-hidden="true" />
-              </a>
+              {#if f.video}
+                <a
+                  class="btn btn-primary h-7 gap-1.5 px-2.5 text-body-sm"
+                  href={jobFileUrl(job.id, i, 'video')}
+                  download
+                  title="Download video with enhanced audio"
+                >
+                  <Film class="size-4" aria-hidden="true" />
+                  Video
+                </a>
+                <a
+                  class="btn h-7 gap-1.5 border border-hairline bg-surface-2 px-2.5 text-body-sm text-ink-subtle hover:bg-surface-3 hover:text-ink"
+                  href={jobFileUrl(job.id, i, 'out')}
+                  download
+                  title="Download enhanced audio (WAV)"
+                >
+                  <Download class="size-4" aria-hidden="true" />
+                  Audio
+                </a>
+              {:else}
+                <a
+                  class="btn btn-primary h-7 gap-1.5 px-2.5 text-body-sm"
+                  href={jobFileUrl(job.id, i, 'out')}
+                  download
+                  title="Download enhanced audio (WAV)"
+                >
+                  <Download class="size-4" aria-hidden="true" />
+                  Audio
+                </a>
+              {/if}
             {:else if f.status === 'processing'}
               <span class="text-caption text-primary">working…</span>
             {:else if f.status === 'error'}
@@ -135,7 +157,7 @@
           <p class="m-0 mt-1 text-caption text-red-400">{f.error}</p>
         {/if}
         {#if expanded === i && f.status === 'done'}
-          <div class="mt-3 grid gap-3 border-t border-hairline pt-3 sm:grid-cols-2">
+          <div class="mt-3 grid gap-3 pt-3 sm:grid-cols-2">
             <div>
               <p class="m-0 mb-1 text-caption text-ink-tertiary">Original</p>
               <audio class="w-full" controls preload="none" src={jobFileUrl(job.id, i, 'in')}></audio>
