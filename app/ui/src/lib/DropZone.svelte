@@ -31,7 +31,9 @@
     if (!list?.length) return
     const allowed = (limits?.allowed_exts ?? FALLBACK_EXTS).map((e) => '.' + e)
     const maxFiles = limits?.max_files ?? 10
-    const maxMb = limits?.max_file_mb ?? 100
+    // Before /api/health resolves we don't know the server's cap, so don't
+    // invent one the server wouldn't enforce — let the server be the judge.
+    const maxMb = limits?.max_file_mb ?? Number.POSITIVE_INFINITY
     const bad: string[] = []
     const ok: File[] = []
     for (const f of Array.from(list)) {
