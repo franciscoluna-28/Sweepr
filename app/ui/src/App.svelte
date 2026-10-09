@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import Controls from './lib/Controls.svelte'
-  import DropZone from './lib/DropZone.svelte'
-  import JobPanel from './lib/JobPanel.svelte'
-  import Logo from './lib/Logo.svelte'
+  import Controls from './components/Controls.svelte'
+  import DropZone from './components/DropZone.svelte'
+  import JobPanel from './components/JobPanel.svelte'
+  import Logo from './components/Logo.svelte'
   import {
     createJob,
     deleteJob,

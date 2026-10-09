@@ -1,5 +1,5 @@
 <script lang="ts">
-  import logoUrl from '../logo.png'
+  import logoUrl from '../assets/logo.png'
 
   let { size = 36 }: { size?: number } = $props()
 </script>

@@ -8,7 +8,7 @@
     X,
   } from '@lucide/svelte'
   import AbCompare from './AbCompare.svelte'
-  import { isActive, jobFileUrl, jobZipUrl, type Job } from './api'
+  import { isActive, jobFileUrl, jobZipUrl, type Job } from '../lib/api'
 
   let { job, onclear }: { job: Job; onclear: () => void } = $props()
 

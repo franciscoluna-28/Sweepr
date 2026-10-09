@@ -17,6 +17,8 @@ node_modules/
 dist/
 .vite/
 .svelte-kit/
+.pnpm-store/
+*.tsbuildinfo
 
 # DeepFilterNet model cache / downloads
 models/

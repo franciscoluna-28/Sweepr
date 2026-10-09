@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { JobLimits } from './api'
+  import type { JobLimits } from '../lib/api'
 
   let {
     files,
