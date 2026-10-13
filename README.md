@@ -111,22 +111,40 @@ SWEEPR_PORT=9000 SWEEPR_MAX_FILES=2 docker compose -f docker-compose.prod.yml up
 
 In production it's one process and one origin: FastAPI serves the built UI and
 the `/api/*` routes, and the UI calls them with relative paths (`/api/...`).
-There is no generated client — `app/ui/src/lib/api.ts` is a small hand-written
-fetch wrapper. In dev the UI runs on Vite and proxies `/api` to the server.
-Because the paths are relative, moving to a desktop shell (e.g. Tauri) later
-needs no client changes.
+In dev the UI runs on Vite and proxies `/api` to the server. Because the paths
+are relative, moving to a desktop shell (e.g. Tauri) later needs no client
+changes.
+
+The client is typed from the API itself. FastAPI's OpenAPI schema is exported to
+`app/ui/openapi.json`, then `openapi-typescript` generates
+`app/ui/src/lib/api-schema.d.ts`. The thin `app/ui/src/lib/api.ts` wraps the
+generated types with the tiny `openapi-fetch` client, plus a few domain helpers
+(job polling, direct file/zip URLs) that codegen can't express. After changing a
+route or a model in `app/schemas.py`, regenerate:
+
+```
+.venv\Scripts\python.exe scripts\export_openapi.py
+pnpm --dir app/ui gen:api
+```
+
+The generated files are committed, so the UI's Node-only build stage (and CI)
+don't need Python.
 
 ## Project layout
 
 ```
 app/             The monolith (one package, one process)
-  main.py        Serves the built UI + handles /api/*
+  main.py        Serves the built UI + handles /api/* (standard error shape)
+  api.py         HTTP routes (validation + wiring, no DSP)
+  schemas.py     Pydantic response/error models (source of the OpenAPI schema)
   engine.py      DeepFilterNet engine (single-file, sample-rate preserving)
   ui/            Svelte 5 + Vite + TypeScript + Tailwind source
+    openapi.json          Exported FastAPI schema (generated)
+    src/lib/api-schema.d.ts  Generated types (committed)
   ui/dist/       Build output served by main.py
 start.py         Launcher (starts server, opens browser)
 run.bat          Windows launcher
-scripts/         Smoke test
+scripts/         Smoke test + OpenAPI exporter
 Dockerfile       Production image (UI build + Python runtime)
 Dockerfile.dev   Dev API image
 docker-compose.yml       Dev stack (api + web, HMR)

@@ -1,105 +1,87 @@
-// Hand-written fetch wrappers for the routes in app/api.py.
-// No code generation, no generated client — just typed helpers.
+// Typed client generated from the FastAPI schema.
+//
+// Types come from ./api-schema.d.ts (regenerate with `pnpm gen:api`). Transport
+// is the tiny `openapi-fetch` wrapper; the domain helpers below (polling, direct
+// file/zip URLs) stay hand-written because a generated client returns bodies,
+// not URLs, and the DOM wants `src`/`href` strings.
 
-export interface JobLimits {
-  max_files: number
-  max_file_mb: number
-  max_total_mb: number
-  max_duration_min: number
-  allowed_exts: string[]
-}
+import createClient from 'openapi-fetch'
+import type { components, paths } from './api-schema'
 
-export interface Health {
-  status: string
-  models_loaded: (boolean | number)[]
-  limits?: JobLimits
-}
-
-export interface JobSettings {
-  atten_lim_db: number
-  post_filter: boolean
-}
-
-export type FileStatus = 'queued' | 'processing' | 'done' | 'error'
-
-export type JobStatus =
-  | 'queued'
-  | 'running'
-  | 'done'
-  | 'done_with_errors'
-  | 'interrupted'
-
-export interface JobFile {
-  name: string
-  stored: string
-  status: FileStatus
-  error: string | null
-  video: string | null
-}
-
-export interface Job {
-  id: string
-  created: string
-  status: JobStatus
-  settings: JobSettings
-  files: JobFile[]
-}
+export type Health = components['schemas']['Health']
+export type JobLimits = components['schemas']['Limits']
+export type JobSettings = components['schemas']['JobSettings']
+export type JobFile = components['schemas']['JobFile']
+export type Job = components['schemas']['Job']
+export type JobStatus = Job['status']
+export type FileStatus = JobFile['status']
+export type ErrorDetail = components['schemas']['ErrorDetail']
+export type ErrorEnvelope = components['schemas']['ErrorEnvelope']
 
 export interface JobParams {
   attenLimDb: number
   postFilter: boolean
 }
 
+const client = createClient<paths>({ baseUrl: '' })
+
 export function isActive(status: JobStatus): boolean {
   return status === 'queued' || status === 'running'
 }
 
-async function errorFrom(res: Response): Promise<Error> {
-  const body = await res.json().catch(() => null)
-  const detail: unknown = body?.detail
-  if (detail && typeof detail === 'object' && 'errors' in detail) {
-    const errors = (detail as { errors?: unknown }).errors
-    if (Array.isArray(errors) && errors.length) return new Error(errors.join(' · '))
-  }
-  if (typeof detail === 'string') return new Error(detail)
-  if (detail && typeof detail === 'object' && 'message' in detail) {
-    return new Error(String((detail as { message: unknown }).message))
-  }
-  return new Error(`Request failed (${res.status})`)
+function errorFrom(error: ErrorEnvelope | undefined, status: number): Error {
+  const detail = error?.detail
+  if (detail?.errors?.length) return new Error(detail.errors.join(' · '))
+  if (detail?.message) return new Error(detail.message)
+  return new Error(`Request failed (${status})`)
 }
 
 export async function getHealth(): Promise<Health> {
-  const res = await fetch('/api/health')
-  if (!res.ok) throw new Error('Health check failed')
-  return res.json()
+  const { data, response } = await client.GET('/api/health')
+  if (data === undefined) throw errorFrom(undefined, response.status)
+  return data
 }
 
 export async function listJobs(): Promise<Job[]> {
-  const res = await fetch('/api/jobs')
-  if (!res.ok) throw await errorFrom(res)
-  return res.json()
+  const { data, error, response } = await client.GET('/api/jobs')
+  if (data === undefined) throw errorFrom(error, response.status)
+  return data
 }
 
 export async function getJob(id: string): Promise<Job> {
-  const res = await fetch(`/api/jobs/${id}`)
-  if (!res.ok) throw await errorFrom(res)
-  return res.json()
+  const { data, error, response } = await client.GET('/api/jobs/{job_id}', {
+    params: { path: { job_id: id } },
+  })
+  if (data === undefined) throw errorFrom(error, response.status)
+  return data
 }
 
 export async function createJob(files: File[], params: JobParams): Promise<string> {
-  const form = new FormData()
-  for (const f of files) form.append('files', f, f.name)
-  form.append('atten_lim_db', String(params.attenLimDb))
-  form.append('post_filter', String(params.postFilter))
-  const res = await fetch('/api/jobs', { method: 'POST', body: form })
-  if (!res.ok) throw await errorFrom(res)
-  const data = await res.json()
-  return data.job_id as string
+  const { data, error, response } = await client.POST('/api/jobs', {
+    // Browsers send binary as a string in the schema; the real File[] rides in
+    // the serializer below (the documented openapi-fetch multipart pattern).
+    body: {
+      files: files as unknown as string[],
+      atten_lim_db: params.attenLimDb,
+      post_filter: params.postFilter,
+    },
+    bodySerializer(body) {
+      const form = new FormData()
+      for (const f of files) form.append('files', f, f.name)
+      form.append('atten_lim_db', String(body.atten_lim_db))
+      form.append('post_filter', String(body.post_filter))
+      return form
+    },
+  })
+  if (data === undefined) throw errorFrom(error, response.status)
+  return data.job_id
 }
 
 export async function deleteJob(id: string): Promise<void> {
-  const res = await fetch(`/api/jobs/${id}`, { method: 'DELETE' })
-  if (!res.ok && res.status !== 404) throw await errorFrom(res)
+  const { error, response } = await client.DELETE('/api/jobs/{job_id}', {
+    params: { path: { job_id: id } },
+  })
+  if (error && response.status !== 404) throw errorFrom(error, response.status)
 }
 
 export function jobFileUrl(id: string, index: number, which: 'in' | 'out' | 'video'): string {

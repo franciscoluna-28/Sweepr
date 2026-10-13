@@ -31,3 +31,20 @@ Run the smoke test after changing app code:
 ```
 .venv\Scripts\python.exe scripts\smoke_test.py
 ```
+
+Run the UI typecheck after changing UI code:
+
+```
+pnpm --dir app/ui check
+```
+
+## API client
+
+The UI's types are generated from the FastAPI schema. After changing a route in
+`app/api.py`, a model in `app/schemas.py`, or the error envelope, regenerate and
+commit both files:
+
+```
+.venv\Scripts\python.exe scripts\export_openapi.py
+pnpm --dir app/ui gen:api
+```
