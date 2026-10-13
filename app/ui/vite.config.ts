@@ -6,7 +6,7 @@ import { defineConfig } from 'vite'
 // in Docker Compose it's the `api` service hostname.
 const apiTarget =
   process.env.VITE_API_PROXY ??
-  `http://127.0.0.1:${process.env.MEOWLESS_PORT ?? 8765}`
+  `http://127.0.0.1:${process.env.SWEEPR_PORT ?? 8765}`
 
 export default defineConfig({
   plugins: [tailwindcss(), svelte()],

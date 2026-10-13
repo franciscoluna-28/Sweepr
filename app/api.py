@@ -243,7 +243,7 @@ def download_zip(job_id: str):
     return FileResponse(
         tmp_path,
         media_type="application/zip",
-        filename=f"meowless_{job_id[:8]}.zip",
+        filename=f"sweepr_{job_id[:8]}.zip",
         background=BackgroundTask(_remove, tmp_path),
     )
 

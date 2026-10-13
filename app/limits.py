@@ -1,7 +1,7 @@
 """Hard limits and allowlists — enforced on the server, mirrored by the UI via /api/health.
 
-Every value below is overridable with a ``MEOWLESS_*`` environment variable
-(``MEOWLESS_PORT`` also falls back to the platform-standard ``PORT``), so one
+Every value below is overridable with a ``SWEEPR_*`` environment variable
+(``SWEEPR_PORT`` also falls back to the platform-standard ``PORT``), so one
 image can be tuned per deployment. Invalid values fail fast at import with a
 message naming the variable. Byte sizes accept plain integers (bytes) or
 human suffixes: ``5120M``, ``5G``, ``5GiB``.
@@ -14,7 +14,7 @@ import os
 import re
 from pathlib import Path
 
-_PREFIX = "MEOWLESS_"
+_PREFIX = "SWEEPR_"
 
 _BYTES_RE = re.compile(r"^(\d+(?:\.\d+)?)\s*([kmgt]i?b?|b)?$", re.IGNORECASE)
 _BYTE_UNITS = {"": 1, "k": 1024, "m": 1024**2, "g": 1024**3, "t": 1024**4}
@@ -72,7 +72,7 @@ def _path_env(name: str, default: Path) -> Path:
 
 
 def _port() -> int:
-    """MEOWLESS_PORT first, then the platform-standard PORT (Cloud Run, Fly…), else 8765."""
+    """SWEEPR_PORT first, then the platform-standard PORT (Cloud Run, Fly…), else 8765."""
     for var in (_PREFIX + "PORT", "PORT"):
         raw = os.environ.get(var)
         if raw is None or not raw.strip():

@@ -32,5 +32,5 @@ COPY app/ ./app/
 COPY --from=ui /ui/dist ./app/ui/dist
 
 EXPOSE 8765
-# Port is configurable via MEOWLESS_PORT (falls back to platform PORT, then 8765).
-CMD exec uvicorn app.main:app --host 0.0.0.0 --port "${MEOWLESS_PORT:-${PORT:-8765}}"
+# Port is configurable via SWEEPR_PORT (falls back to platform PORT, then 8765).
+CMD exec uvicorn app.main:app --host 0.0.0.0 --port "${SWEEPR_PORT:-${PORT:-8765}}"

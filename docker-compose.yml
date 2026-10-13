@@ -5,15 +5,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    command: uvicorn app.main:app --host 0.0.0.0 --port ${MEOWLESS_PORT:-8765} --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port ${SWEEPR_PORT:-8765} --reload
     environment:
       PYTHONUNBUFFERED: "1"
-      MEOWLESS_PORT: "${MEOWLESS_PORT:-8765}"
+      SWEEPR_PORT: "${SWEEPR_PORT:-8765}"
     volumes:
       - ./app:/srv/app
       - model-cache:/root/.cache
     ports:
-      - "${MEOWLESS_PORT:-8765}:${MEOWLESS_PORT:-8765}"
+      - "${SWEEPR_PORT:-8765}:${SWEEPR_PORT:-8765}"
 
   web:
     build:
@@ -23,7 +23,7 @@ services:
     # package.json (a stale volume shadows the image's node_modules).
     command: sh -c "pnpm install --frozen-lockfile && pnpm dev"
     environment:
-      VITE_API_PROXY: http://api:${MEOWLESS_PORT:-8765}
+      VITE_API_PROXY: http://api:${SWEEPR_PORT:-8765}
       CHOKIDAR_USEPOLLING: "true"
     volumes:
       - ./app/ui:/web

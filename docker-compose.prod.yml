@@ -6,9 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      MEOWLESS_PORT: "${MEOWLESS_PORT:-8765}"
+      SWEEPR_PORT: "${SWEEPR_PORT:-8765}"
     ports:
-      - "${MEOWLESS_PORT:-8765}:${MEOWLESS_PORT:-8765}"
+      - "${SWEEPR_PORT:-8765}:${SWEEPR_PORT:-8765}"
     volumes:
       - model-cache:/root/.cache
     restart: unless-stopped

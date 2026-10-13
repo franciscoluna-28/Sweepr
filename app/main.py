@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Meowless",
+    title="Sweepr",
     description=(
         "Local, single-process app that removes background noise from audio "
         "files with DeepFilterNet. Files never leave the machine. The Svelte "
