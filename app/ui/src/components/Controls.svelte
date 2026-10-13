@@ -1,6 +1,6 @@
 <script lang="ts">
   let {
-    atten = $bindable(25),
+    atten = $bindable(30),
     postFilter = $bindable(false),
     disabled = false,
   }: { atten?: number; postFilter?: boolean; disabled?: boolean } = $props()

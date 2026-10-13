@@ -17,7 +17,7 @@
   } from './lib/api'
 
   let files = $state<File[]>([])
-  let atten = $state(25)
+  let atten = $state(30)
   let postFilter = $state(false)
   let job = $state<Job | null>(null)
   let starting = $state(false)
