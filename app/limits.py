@@ -34,9 +34,7 @@ def _int_env(name: str, default: int, minimum: int, maximum: int | None = None) 
     try:
         value = int(raw, 10)
     except ValueError:
-        raise ValueError(
-            f"{_PREFIX}{name} must be an integer, got {raw!r}"
-        ) from None
+        raise ValueError(f"{_PREFIX}{name} must be an integer, got {raw!r}") from None
     if value < minimum or (maximum is not None and value > maximum):
         bound = (
             f"between {minimum} and {maximum}"
@@ -116,7 +114,7 @@ ALLOWED_EXTS = AUDIO_EXTS | VIDEO_EXTS
 
 MIN_ATTEN_DB = 0.0
 MAX_ATTEN_DB = 100.0
-DEFAULT_ATTEN_DB = 25.0
+DEFAULT_ATTEN_DB = 30.0
 
 # Post-denoise loudness normalization (opt-in). Targets are EBU R128 integrated
 # loudness in LUFS; the true-peak ceiling keeps inter-sample overs in check.

@@ -368,7 +368,7 @@
           "atten_lim_db": {
             "type": "number",
             "title": "Atten Lim Db",
-            "default": 25.0
+            "default": 30.0
           },
           "post_filter": {
             "type": "boolean",

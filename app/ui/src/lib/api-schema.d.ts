@@ -101,7 +101,7 @@ export interface components {
             files: string[];
             /**
              * Atten Lim Db
-             * @default 25
+             * @default 30
              */
             atten_lim_db: number;
             /**
