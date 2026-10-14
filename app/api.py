@@ -72,6 +72,9 @@ def health():
             "max_total_mb": limits.MAX_TOTAL_BYTES // 1048576,
             "max_duration_min": limits.MAX_DURATION_S // 60,
             "allowed_exts": sorted(e.lstrip(".") for e in limits.ALLOWED_EXTS),
+            "normalize_targets": list(limits.LUFS_PRESETS),
+            "target_lufs_range": [limits.MIN_TARGET_LUFS, limits.MAX_TARGET_LUFS],
+            "true_peak_dbtp": limits.DEFAULT_TRUE_PEAK_DBTP,
         },
     }
 
@@ -81,6 +84,8 @@ async def create_job(
     files: list[UploadFile] = File(...),
     atten_lim_db: float = Form(limits.DEFAULT_ATTEN_DB),
     post_filter: bool = Form(False),
+    normalize: bool = Form(False),
+    target_lufs: float = Form(limits.DEFAULT_TARGET_LUFS),
 ):
     errors: list[str] = []
     if not 0 < len(files) <= limits.MAX_FILES:
@@ -90,6 +95,13 @@ async def create_job(
     ):
         errors.append(
             f"atten_lim_db must be between {limits.MIN_ATTEN_DB:.0f} and {limits.MAX_ATTEN_DB:.0f}"
+        )
+    if normalize and (
+        not math.isfinite(target_lufs)
+        or not limits.MIN_TARGET_LUFS <= target_lufs <= limits.MAX_TARGET_LUFS
+    ):
+        errors.append(
+            f"target_lufs must be between {limits.MIN_TARGET_LUFS:.0f} and {limits.MAX_TARGET_LUFS:.0f}"
         )
     if errors:
         _reject("invalid job settings", errors)
@@ -130,6 +142,8 @@ async def create_job(
                     "status": "queued",
                     "error": None,
                     "video": None,
+                    "lufs_before": None,
+                    "lufs_after": None,
                 }
             )
         if errors:
@@ -142,6 +156,8 @@ async def create_job(
                 "settings": {
                     "atten_lim_db": atten_lim_db,
                     "post_filter": post_filter,
+                    "normalize": normalize,
+                    "target_lufs": target_lufs,
                 },
                 "files": entries,
             }

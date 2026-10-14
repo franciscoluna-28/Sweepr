@@ -6,6 +6,4 @@ uvicorn[standard]
 python-multipart
 soundfile
 numpy
-pyloudnorm
-scipy
 httpx  # smoke test (FastAPI TestClient)

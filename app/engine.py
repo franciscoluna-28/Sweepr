@@ -1,6 +1,7 @@
 """DeepFilterNet engine: header validation plus a file-to-file pipeline."""
 
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -188,6 +189,88 @@ def _mux_video(video_src: str, enhanced_wav: str, dst: str) -> None:
         raise AudioError("could not write the video with enhanced audio")
 
 
+_LRA = 11.0
+
+
+def _normalize_wav(
+    path: str, sr: int, target_lufs: float, tp_dbtp: float
+) -> tuple[float, float]:
+    """Rewrite a WAV in place to a target integrated loudness (EBU R128).
+
+    A two-pass ffmpeg ``loudnorm`` (streaming, so it scales to the duration cap
+    without buffering the whole file) measures, then applies linear gain with a
+    true-peak ceiling. Returns ``(lufs_before, lufs_after)``; NaN when the
+    signal is silent or too short to measure.
+    """
+    ffmpeg = _ffmpeg()
+    measure = subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-nostdin",
+            "-i",
+            path,
+            "-af",
+            f"loudnorm=I={target_lufs}:TP={tp_dbtp}:LRA={_LRA}:print_format=json",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    text = measure.stderr or ""
+    start, end = text.find("{"), text.rfind("}")
+    if measure.returncode != 0 or start == -1 or end <= start:
+        raise AudioError("could not measure loudness for normalization")
+    try:
+        measured = json.loads(text[start : end + 1])
+    except ValueError:
+        raise AudioError("could not measure loudness for normalization")
+
+    def _value(key: str) -> float:
+        try:
+            value = float(measured[key])
+        except (KeyError, TypeError, ValueError):
+            return float("nan")
+        return value if math.isfinite(value) else float("nan")
+
+    before, after = _value("input_i"), _value("output_i")
+
+    tmp = path + ".norm.wav"
+    applied = subprocess.run(
+        [
+            ffmpeg,
+            "-hide_banner",
+            "-nostdin",
+            "-y",
+            "-i",
+            path,
+            "-af",
+            (
+                f"loudnorm=I={target_lufs}:TP={tp_dbtp}:LRA={_LRA}"
+                f":measured_I={measured.get('input_i')}"
+                f":measured_TP={measured.get('input_tp')}"
+                f":measured_LRA={measured.get('input_lra')}"
+                f":measured_thresh={measured.get('input_thresh')}"
+                f":offset={measured.get('target_offset')}"
+                ":linear=true"
+            ),
+            "-ar",
+            str(sr),
+            "-c:a",
+            "pcm_s24le",
+            tmp,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if applied.returncode != 0 or not os.path.isfile(tmp):
+        raise AudioError("could not normalize loudness")
+    os.replace(tmp, path)
+    return before, after
+
+
 def _level_input(audio):
     """Boost a quiet input toward TARGET_RMS_DB so the model has signal to work with."""
     rms = float(audio.pow(2).mean().sqrt())
@@ -246,11 +329,13 @@ def probe(path: str) -> dict:
     }
 
 
-def process_file(src: str, dst: str, settings: dict) -> str | None:
+def process_file(src: str, dst: str, settings: dict) -> dict:
     """Denoise one file into a 24-bit WAV, preserving the source sample rate.
 
-    For video inputs, also mux the enhanced audio back onto the original video
-    track (stream-copied) and return that file's path; otherwise return None.
+    When ``settings["normalize"]`` is set, the enhanced WAV is normalized to
+    ``settings["target_lufs"]`` after denoising (and before muxing). Returns a
+    dict with the muxed ``video`` path (or None) and the measured ``lufs_before``
+    / ``lufs_after`` (both None when normalization is off).
     """
     original = src
     is_video = _is_video(original)
@@ -279,10 +364,16 @@ def process_file(src: str, dst: str, settings: dict) -> str | None:
     np.clip(samples, -1.0, 1.0, out=samples)
     sf.write(dst, samples, src_sr, format="WAV", subtype="PCM_24")
 
-    if not is_video:
-        return None
-    if not _has_video_stream(original):
-        return None
+    lufs_before = lufs_after = None
+    if settings.get("normalize"):
+        lufs_before, lufs_after = _normalize_wav(
+            dst, src_sr, float(settings["target_lufs"]), limits.DEFAULT_TRUE_PEAK_DBTP
+        )
+
+    result = {"video": None, "lufs_before": lufs_before, "lufs_after": lufs_after}
+    if not is_video or not _has_video_stream(original):
+        return result
     video_dst = os.path.splitext(dst)[0] + _video_out_ext(original)
     _mux_video(original, dst, video_dst)
-    return video_dst
+    result["video"] = video_dst
+    return result

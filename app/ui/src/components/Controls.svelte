@@ -2,8 +2,18 @@
   let {
     atten = $bindable(25),
     postFilter = $bindable(false),
+    normalize = $bindable(false),
+    targetLufs = $bindable(-14),
+    targets = [-14, -16],
     disabled = false,
-  }: { atten?: number; postFilter?: boolean; disabled?: boolean } = $props()
+  }: {
+    atten?: number
+    postFilter?: boolean
+    normalize?: boolean
+    targetLufs?: number
+    targets?: number[]
+    disabled?: boolean
+  } = $props()
 </script>
 
 <div class="flex items-center justify-between gap-4">
@@ -35,3 +45,28 @@
   />
   <span>Extra post-filter - over-attenuate very noisy parts</span>
 </label>
+
+<label class="mt-4 flex items-start gap-3 text-body-sm text-ink-subtle">
+  <input
+    type="checkbox"
+    bind:checked={normalize}
+    {disabled}
+    class="mt-0.5 size-4 shrink-0 cursor-pointer accent-primary disabled:opacity-50"
+  />
+  <span>Normalize loudness - steady output level across files</span>
+</label>
+{#if normalize}
+  <div class="mt-2 flex items-center gap-3 pl-7 text-body-sm text-ink-subtle">
+    <label for="target-lufs" class="text-ink-tertiary">Target</label>
+    <select
+      id="target-lufs"
+      bind:value={targetLufs}
+      {disabled}
+      class="cursor-pointer rounded-sm border border-hairline bg-surface-2 px-2 py-1 text-body-sm text-ink disabled:opacity-50"
+    >
+      {#each targets as t}
+        <option value={t}>{t} LUFS</option>
+      {/each}
+    </select>
+  </div>
+{/if}

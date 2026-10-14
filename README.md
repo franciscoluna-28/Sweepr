@@ -13,6 +13,8 @@ your machine — recordings are never uploaded anywhere.
   re-encoded). The enhanced audio track is still available as WAV
 - **Noise reduction strength** slider (maps to DeepFilterNet's attenuation limit)
 - Optional post-filter for extra suppression on very noisy parts
+- Optional loudness normalization after cleaning (target -14 or -16 LUFS, with
+  a -1 dBTP true-peak ceiling; off by default, requires `ffmpeg`)
 - A/B compare original vs enhanced
 - Preserves the original sample rate; output is 24-bit WAV
 
@@ -113,3 +115,6 @@ docker-compose.prod.yml  Production stack
   silence. Loud inputs are left untouched.
 - DeepFilterNet processes at 48 kHz internally; Meowless resamples back to the
   source rate and writes a 24-bit WAV.
+- Loudness normalization runs *after* denoising (and before muxing a video), so
+  the cleaned audio is measured once and brought to target with a single linear
+  gain. It changes level, not signal-to-noise — only the denoiser does that.

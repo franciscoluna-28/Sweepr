@@ -184,6 +184,34 @@ def main() -> None:
         print("single-file job OK")
         client.delete(f"/api/jobs/{single['id']}")
 
+        if shutil.which("ffmpeg"):
+            resp = client.post(
+                "/api/jobs",
+                files=[
+                    (
+                        "files",
+                        ("normalize_me.wav", make_wav(44100, 3.0, 1), "audio/wav"),
+                    )
+                ],
+                data={"atten_lim_db": "50", "normalize": "true", "target_lufs": "-16"},
+            )
+            assert resp.status_code == 202, resp.text
+            norm = wait_for_job(client, resp.json()["job_id"])
+            assert norm["status"] == "done", [f.get("error") for f in norm["files"]]
+            entry = norm["files"][0]
+            assert entry["lufs_before"] is not None, entry
+            assert entry["lufs_after"] is not None, entry
+            assert abs(entry["lufs_after"] - (-16.0)) <= 1.0, entry
+            out = client.get(f"/api/jobs/{norm['id']}/files/0", params={"which": "out"})
+            assert out.status_code == 200
+            print(
+                f"normalize OK: {entry['lufs_before']:.1f} -> "
+                f"{entry['lufs_after']:.1f} LUFS (target -16)"
+            )
+            client.delete(f"/api/jobs/{norm['id']}")
+        else:
+            print("skipping normalize job: ffmpeg not on PATH")
+
         if shutil.which("ffmpeg") and shutil.which("ffprobe"):
             resp = client.post(
                 "/api/jobs",
@@ -265,6 +293,11 @@ def main() -> None:
             why="11 files",
         )
         expect_reject(client, data={"atten_lim_db": "200"}, why="atten out of range")
+        expect_reject(
+            client,
+            data={"normalize": "true", "target_lufs": "0"},
+            why="target_lufs out of range",
+        )
 
         if shutil.which("ffmpeg") and shutil.which("ffprobe"):
             expect_reject(

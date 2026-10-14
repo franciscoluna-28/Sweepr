@@ -7,6 +7,9 @@ export interface JobLimits {
   max_total_mb: number
   max_duration_min: number
   allowed_exts: string[]
+  normalize_targets: number[]
+  target_lufs_range: [number, number]
+  true_peak_dbtp: number
 }
 
 export interface Health {
@@ -18,6 +21,8 @@ export interface Health {
 export interface JobSettings {
   atten_lim_db: number
   post_filter: boolean
+  normalize: boolean
+  target_lufs: number
 }
 
 export type FileStatus = 'queued' | 'processing' | 'done' | 'error'
@@ -35,6 +40,8 @@ export interface JobFile {
   status: FileStatus
   error: string | null
   video: string | null
+  lufs_before: number | null
+  lufs_after: number | null
 }
 
 export interface Job {
@@ -48,6 +55,8 @@ export interface Job {
 export interface JobParams {
   attenLimDb: number
   postFilter: boolean
+  normalize: boolean
+  targetLufs: number
 }
 
 export function isActive(status: JobStatus): boolean {
@@ -91,6 +100,8 @@ export async function createJob(files: File[], params: JobParams): Promise<strin
   for (const f of files) form.append('files', f, f.name)
   form.append('atten_lim_db', String(params.attenLimDb))
   form.append('post_filter', String(params.postFilter))
+  form.append('normalize', String(params.normalize))
+  form.append('target_lufs', String(params.targetLufs))
   const res = await fetch('/api/jobs', { method: 'POST', body: form })
   if (!res.ok) throw await errorFrom(res)
   const data = await res.json()

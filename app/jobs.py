@@ -115,10 +115,16 @@ def _run_job(job_id: str) -> None:
         src = job_dir(job_id) / entry["stored"]
         dst = job_dir(job_id) / "out" / f"{i:02d}.wav"
         try:
-            video = engine.process_file(str(src), str(dst), job["settings"])
-            entry.update(status="done", error=None, video=None)
-            if video:
-                entry["video"] = f"out/{os.path.basename(video)}"
+            result = engine.process_file(str(src), str(dst), job["settings"])
+            entry.update(
+                status="done",
+                error=None,
+                video=None,
+                lufs_before=result["lufs_before"],
+                lufs_after=result["lufs_after"],
+            )
+            if result["video"]:
+                entry["video"] = f"out/{os.path.basename(result['video'])}"
         except engine.AudioError as e:
             entry.update(status="error", error=str(e))
         except Exception as e:

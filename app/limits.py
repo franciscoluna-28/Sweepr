@@ -18,3 +18,11 @@ ALLOWED_EXTS = AUDIO_EXTS | VIDEO_EXTS
 MIN_ATTEN_DB = 0.0
 MAX_ATTEN_DB = 100.0
 DEFAULT_ATTEN_DB = 25.0
+
+# Post-denoise loudness normalization (opt-in). Targets are EBU R128 integrated
+# loudness in LUFS; the true-peak ceiling keeps inter-sample overs in check.
+MIN_TARGET_LUFS = -24.0
+MAX_TARGET_LUFS = -9.0
+DEFAULT_TARGET_LUFS = -14.0
+DEFAULT_TRUE_PEAK_DBTP = -1.0
+LUFS_PRESETS = (-14.0, -16.0)

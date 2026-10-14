@@ -153,6 +153,13 @@
             {/if}
           </span>
         </div>
+        {#if f.status === 'done' && f.lufs_after != null}
+          <p class="m-0 mt-1 font-mono text-caption text-ink-tertiary tabular-nums">
+            {#if f.lufs_before != null}{f.lufs_before.toFixed(1)} dB → {/if}{f.lufs_after.toFixed(
+              1,
+            )} LUFS
+          </p>
+        {/if}
         {#if f.status === 'error' && f.error}
           <p class="m-0 mt-1 text-caption text-red-400">{f.error}</p>
         {/if}

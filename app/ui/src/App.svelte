@@ -19,6 +19,8 @@
   let files = $state<File[]>([])
   let atten = $state(25)
   let postFilter = $state(false)
+  let normalize = $state(false)
+  let targetLufs = $state(-14)
   let job = $state<Job | null>(null)
   let starting = $state(false)
   let error = $state('')
@@ -37,7 +39,7 @@
     starting = true
     error = ''
     try {
-      const id = await createJob(files, { attenLimDb: atten, postFilter })
+      const id = await createJob(files, { attenLimDb: atten, postFilter, normalize, targetLufs })
       files = []
       job = await getJob(id)
       watch(id)
@@ -115,7 +117,13 @@
     </section>
 
     <section class="panel p-4 sm:p-5">
-      <Controls bind:atten bind:postFilter />
+      <Controls
+        bind:atten
+        bind:postFilter
+        bind:normalize
+        bind:targetLufs
+        targets={limits?.normalize_targets ?? [-14, -16]}
+      />
       <button
         class="btn btn-primary mt-6 h-10 w-full"
         disabled={!files.length || starting}
