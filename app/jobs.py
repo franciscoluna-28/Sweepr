@@ -17,7 +17,7 @@ from pathlib import Path
 
 from . import engine, limits
 
-JOBS_DIR = Path(__file__).resolve().parent / "data" / "jobs"
+JOBS_DIR = limits.JOBS_DIR
 _MANIFEST = "manifest.json"
 _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 ACTIVE_STATUSES = ("queued", "running")

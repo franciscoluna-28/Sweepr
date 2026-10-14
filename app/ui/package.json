@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "gen:api": "openapi-typescript openapi.json -o src/lib/api-schema.d.ts",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
@@ -15,6 +16,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^24.13.3",
+    "openapi-typescript": "^7.13.0",
     "svelte": "^5.57.0",
     "svelte-check": "^4.7.6",
     "tailwindcss": "^4.3.3",
@@ -22,6 +24,7 @@
     "vite": "^8.3.0"
   },
   "dependencies": {
-    "@lucide/svelte": "^1.53.0"
+    "@lucide/svelte": "^1.53.0",
+    "openapi-fetch": "^0.17.0"
   }
 }

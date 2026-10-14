@@ -5,8 +5,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      SWEEPR_PORT: "${SWEEPR_PORT:-8765}"
     ports:
-      - "8765:8765"
+      - "${SWEEPR_PORT:-8765}:${SWEEPR_PORT:-8765}"
     volumes:
       - model-cache:/root/.cache
     restart: unless-stopped

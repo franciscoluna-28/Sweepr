@@ -13,9 +13,13 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 from starlette.background import BackgroundTask
 
-from . import engine, jobs, limits
+from . import engine, jobs, limits, schemas
 
 router = APIRouter(prefix="/api", tags=["jobs"])
+
+# Every non-2xx response uses the same envelope (see main.py's exception handlers).
+_ERR = {"model": schemas.ErrorEnvelope}
+_BIN = {"content": {"application/octet-stream": {}}}
 
 
 class _TooLarge(Exception):
@@ -61,7 +65,7 @@ async def _save(upload: UploadFile, dest, total_so_far: int) -> int:
     return written
 
 
-@router.get("/health", summary="Service, model, and limit status")
+@router.get("/health", response_model=schemas.Health, summary="Service, model, and limit status")
 def health():
     return {
         "status": "ok",
@@ -79,7 +83,13 @@ def health():
     }
 
 
-@router.post("/jobs", status_code=202, summary="Create a batch job")
+@router.post(
+    "/jobs",
+    status_code=202,
+    response_model=schemas.CreateJobResponse,
+    responses={400: _ERR, 422: _ERR, 429: _ERR},
+    summary="Create a batch job",
+)
 async def create_job(
     files: list[UploadFile] = File(...),
     atten_lim_db: float = Form(limits.DEFAULT_ATTEN_DB),
@@ -171,18 +181,24 @@ async def create_job(
     return {"job_id": job_id}
 
 
-@router.get("/jobs", summary="List jobs, newest first")
+@router.get("/jobs", response_model=list[schemas.Job], summary="List jobs, newest first")
 def list_jobs():
     return jobs.list_jobs()
 
 
-@router.get("/jobs/{job_id}", summary="Job status and per-file detail")
+@router.get(
+    "/jobs/{job_id}",
+    response_model=schemas.Job,
+    responses={404: _ERR, 422: _ERR},
+    summary="Job status and per-file detail",
+)
 def get_job(job_id: str):
     return _require_valid(job_id)
 
 
 @router.get(
     "/jobs/{job_id}/files/{index}",
+    responses={200: _BIN, 404: _ERR, 422: _ERR},
     summary="Original, enhanced WAV, or muxed video",
 )
 def get_file(job_id: str, index: int, which: Literal["in", "out", "video"] = "in"):
@@ -214,7 +230,11 @@ def get_file(job_id: str, index: int, which: Literal["in", "out", "video"] = "in
     return FileResponse(path, media_type=media, filename=name)
 
 
-@router.get("/jobs/{job_id}/zip", summary="All finished results as a zip")
+@router.get(
+    "/jobs/{job_id}/zip",
+    responses={200: _BIN, 400: _ERR, 404: _ERR, 422: _ERR},
+    summary="All finished results as a zip",
+)
 def download_zip(job_id: str):
     job = _require_valid(job_id)
     done = [(i, f) for i, f in enumerate(job["files"]) if f["status"] == "done"]
@@ -259,12 +279,17 @@ def download_zip(job_id: str):
     return FileResponse(
         tmp_path,
         media_type="application/zip",
-        filename=f"meowless_{job_id[:8]}.zip",
+        filename=f"sweepr_{job_id[:8]}.zip",
         background=BackgroundTask(_remove, tmp_path),
     )
 
 
-@router.delete("/jobs/{job_id}", summary="Cancel (if running) and delete a job")
+@router.delete(
+    "/jobs/{job_id}",
+    status_code=204,
+    responses={202: {"model": schemas.DeleteJobResponse}, 404: _ERR, 422: _ERR},
+    summary="Cancel (if running) and delete a job",
+)
 def delete_job(job_id: str):
     job = _require_valid(job_id)
     if jobs.request_delete(job_id, job["status"]) == "cancelling":

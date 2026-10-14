@@ -1,6 +1,6 @@
 <script lang="ts">
   let {
-    atten = $bindable(25),
+    atten = $bindable(30),
     postFilter = $bindable(false),
     normalize = $bindable(false),
     targetLufs = $bindable(-14),

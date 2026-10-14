@@ -1,4 +1,4 @@
-# Meowless
+# Sweepr
 
 A simple local web app for removing noise from a single audio file using
 [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet). Everything runs on
@@ -81,26 +81,72 @@ docker compose -f docker-compose.prod.yml up --build
 Builds the UI in a Node stage, then serves it (plus the API) from one Python
 container on http://localhost:8765.
 
+## Configuration
+
+Limits are enforced server-side and mirrored to the UI via `/api/health`. Every
+value below can be overridden with an environment variable; invalid values make
+the app fail fast at startup with a message naming the variable.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `SWEEPR_MAX_FILES` | `10` | Files per batch job |
+| `SWEEPR_MAX_FILE_BYTES` | `5G` | Per-file size cap |
+| `SWEEPR_MAX_TOTAL_BYTES` | `10G` | Per-job total upload cap (≥ per-file cap) |
+| `SWEEPR_MAX_DURATION_S` | `14400` | Max media duration in seconds |
+| `SWEEPR_MAX_WAITING_JOBS` | `3` | Jobs allowed to wait in the queue |
+| `SWEEPR_RETENTION_DAYS` | `7` | Days before finished jobs are pruned |
+| `SWEEPR_JOBS_DIR` | `app/data/jobs` | Job storage dir (point at a mounted volume in the cloud) |
+| `SWEEPR_PORT` | `8765` | HTTP port (falls back to platform `PORT`, e.g. Cloud Run / Fly) |
+
+Byte sizes accept plain integers (bytes) or human suffixes: `5120M`, `5G`, `5GiB`.
+
+Format allowlists (extensions, sample rates, channels) are intentionally not
+configurable.
+
+Example (docker compose reads `SWEEPR_PORT` from your shell or `.env`):
+
+```
+SWEEPR_PORT=9000 SWEEPR_MAX_FILES=2 docker compose -f docker-compose.prod.yml up --build
+```
+
 ## How the UI talks to the server
 
 In production it's one process and one origin: FastAPI serves the built UI and
 the `/api/*` routes, and the UI calls them with relative paths (`/api/...`).
-There is no generated client — `app/ui/src/lib/api.ts` is a small hand-written
-fetch wrapper. In dev the UI runs on Vite and proxies `/api` to the server.
-Because the paths are relative, moving to a desktop shell (e.g. Tauri) later
-needs no client changes.
+In dev the UI runs on Vite and proxies `/api` to the server. Because the paths
+are relative, moving to a desktop shell (e.g. Tauri) later needs no client
+changes.
+
+The client is typed from the API itself. FastAPI's OpenAPI schema is exported to
+`app/ui/openapi.json`, then `openapi-typescript` generates
+`app/ui/src/lib/api-schema.d.ts`. The thin `app/ui/src/lib/api.ts` wraps the
+generated types with the tiny `openapi-fetch` client, plus a few domain helpers
+(job polling, direct file/zip URLs) that codegen can't express. After changing a
+route or a model in `app/schemas.py`, regenerate:
+
+```
+.venv\Scripts\python.exe scripts\export_openapi.py
+pnpm --dir app/ui gen:api
+```
+
+The generated files are committed, so the UI's Node-only build stage (and CI)
+don't need Python.
 
 ## Project layout
 
 ```
 app/             The monolith (one package, one process)
-  main.py        Serves the built UI + handles /api/*
+  main.py        Serves the built UI + handles /api/* (standard error shape)
+  api.py         HTTP routes (validation + wiring, no DSP)
+  schemas.py     Pydantic response/error models (source of the OpenAPI schema)
   engine.py      DeepFilterNet engine (single-file, sample-rate preserving)
   ui/            Svelte 5 + Vite + TypeScript + Tailwind source
+    openapi.json          Exported FastAPI schema (generated)
+    src/lib/api-schema.d.ts  Generated types (committed)
   ui/dist/       Build output served by main.py
 start.py         Launcher (starts server, opens browser)
 run.bat          Windows launcher
-scripts/         Smoke test
+scripts/         Smoke test + OpenAPI exporter
 Dockerfile       Production image (UI build + Python runtime)
 Dockerfile.dev   Dev API image
 docker-compose.yml       Dev stack (api + web, HMR)
@@ -113,7 +159,7 @@ docker-compose.prod.yml  Production stack
 - Very quiet recordings (common in camera/video audio) are automatically boosted
   to a usable level before denoising — otherwise the model treats them as
   silence. Loud inputs are left untouched.
-- DeepFilterNet processes at 48 kHz internally; Meowless resamples back to the
+- DeepFilterNet processes at 48 kHz internally; Sweepr resamples back to the
   source rate and writes a 24-bit WAV.
 - Loudness normalization runs *after* denoising (and before muxing a video), so
   the cleaned audio is measured once and brought to target with a single linear
