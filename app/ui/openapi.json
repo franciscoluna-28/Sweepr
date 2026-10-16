@@ -3,7 +3,7 @@
   "info": {
     "title": "Sweepr",
     "description": "Local, single-process app that removes background noise from audio files with DeepFilterNet. Files never leave the machine. The Svelte UI is served by this same app; every run \u2014 even a single file \u2014 is a job.",
-    "version": "0.3.0"
+    "version": "0.1.0"
   },
   "paths": {
     "/api/health": {

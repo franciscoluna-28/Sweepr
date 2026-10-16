@@ -39,7 +39,7 @@ app = FastAPI(
         "UI is served by this same app; every run — even a single file — is a "
         "job."
     ),
-    version="0.3.0",
+    version="0.1.0",
     lifespan=lifespan,
 )
 
