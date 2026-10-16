@@ -1,5 +1,8 @@
 # Sweepr
 
+[![CI](https://github.com/franciscoluna-28/Sweepr/actions/workflows/ci.yml/badge.svg)](https://github.com/franciscoluna-28/Sweepr/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A simple local web app for removing noise from a single audio file using
 [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet). Everything runs on
 your machine — recordings are never uploaded anywhere.
@@ -26,12 +29,18 @@ your machine — recordings are never uploaded anywhere.
 
 ## Setup
 
+On Windows the venv's Python lives at `.venv/Scripts/python.exe`; on
+macOS/Linux it's `.venv/bin/python`.
+
 ```
 uv venv --python 3.11 .venv
 uv pip install --python .venv/Scripts/python.exe torch==2.1.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
 uv pip install --python .venv/Scripts/python.exe -r requirements.txt
 pnpm --dir app/ui install
 ```
+
+Copy `.env.example` to `.env` if you want to change any limits or the port; see
+[Configuration](#configuration).
 
 ## Run
 
@@ -42,8 +51,9 @@ pnpm --dir app/ui build
 .venv\Scripts\python.exe start.py
 ```
 
-Or just double-click `run.bat` (builds if needed, then starts). Open
-http://127.0.0.1:8765 (opens automatically).
+Or just launch it: on Windows double-click `run.bat`; on macOS/Linux run
+`./run.sh`. Both build the UI if needed, start the app, and open
+http://127.0.0.1:8765 automatically.
 
 ## Development
 
@@ -53,6 +63,9 @@ Run the server and the Vite dev server (with HMR) side by side:
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8765
 pnpm --dir app/ui dev
 ```
+
+Or use the dev launcher, which starts both: `run-dev.bat` (Windows) or
+`./run.sh --dev` (macOS/Linux).
 
 Vite proxies `/api` to the Python process. Node is used for building only; the
 production app runs entirely on Python.
@@ -145,7 +158,9 @@ app/             The monolith (one package, one process)
     src/lib/api-schema.d.ts  Generated types (committed)
   ui/dist/       Build output served by main.py
 start.py         Launcher (starts server, opens browser)
-run.bat          Windows launcher
+run.bat          Windows launcher (builds UI if needed, then starts)
+run-dev.bat      Windows dev launcher (auto-reload + Vite HMR)
+run.sh           macOS/Linux launcher (./run.sh, or --dev)
 scripts/         Smoke test + OpenAPI exporter
 Dockerfile       Production image (UI build + Python runtime)
 Dockerfile.dev   Dev API image
@@ -164,3 +179,19 @@ docker-compose.prod.yml  Production stack
 - Loudness normalization runs *after* denoising (and before muxing a video), so
   the cleaned audio is measured once and brought to target with a single linear
   gain. It changes level, not signal-to-noise — only the denoiser does that.
+- The files in `demos/noisy/` are for manual testing; see
+  [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for their provenance.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md). Commits
+follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0).
+Before opening a PR, run `scripts/smoke_test.py` and `pnpm --dir app/ui check`.
+
+## License
+
+[MIT](LICENSE) © 2026 Francisco Luna. This covers Sweepr's own source code only.
+
+The audio under `demos/noisy/` is **not** MIT — it is third-party material
+relicensed here under SpeechBrain's Apache-2.0 terms. See
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for per-file provenance.
