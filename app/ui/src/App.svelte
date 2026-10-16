@@ -129,7 +129,7 @@
         disabled={!files.length || starting}
         onclick={start}
       >
-        {starting ? 'Uploading…' : job && isActive(job.status) ? 'Add to queue' : 'Enhance audio'}
+        {starting ? 'Uploading…' : 'Clean my audio'}
       </button>
       {#if error}
         <p class="m-0 mt-3 text-body-sm text-red-400">{error}</p>

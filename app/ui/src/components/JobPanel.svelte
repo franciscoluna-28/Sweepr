@@ -1,12 +1,5 @@
 <script lang="ts">
-  import {
-    Check,
-    Circle,
-    Download,
-    Film,
-    LoaderCircle,
-    X,
-  } from '@lucide/svelte'
+  import { Check, Circle, Download, LoaderCircle, X } from '@lucide/svelte'
   import AbCompare from './AbCompare.svelte'
   import { isActive, jobFileUrl, jobZipUrl, type Job } from '../lib/api'
 
@@ -72,7 +65,7 @@
         class="btn h-8 border border-hairline bg-surface-2 px-3 text-body-sm text-ink-subtle hover:bg-surface-3"
         onclick={onclear}
       >
-        {active ? 'Cancel' : 'Clear'}
+        {active ? 'Stop' : 'Start over'}
       </button>
     </div>
   </div>
@@ -107,43 +100,26 @@
                 class="inline-flex cursor-pointer items-center rounded-sm border-none bg-transparent p-1 transition-colors hover:text-ink {expanded === i
                   ? 'text-primary'
                   : 'text-ink-tertiary'}"
-                title={expanded === i ? 'Hide A/B comparison' : 'Compare original and enhanced'}
-                aria-label={expanded === i ? 'Hide A/B comparison' : 'Compare original and enhanced'}
+                title={expanded === i
+                  ? 'Hide before/after comparison'
+                  : 'Compare original and enhanced'}
+                aria-label={expanded === i
+                  ? 'Hide before/after comparison'
+                  : 'Compare original and enhanced'}
                 aria-expanded={expanded === i}
                 onclick={() => (expanded = expanded === i ? null : i)}
               >
                 <AbCompare class="size-[18px]" />
               </button>
-              {#if f.video}
-                <a
-                  class="btn btn-primary h-7 gap-1.5 px-2.5 text-body-sm"
-                  href={jobFileUrl(job.id, i, 'video')}
-                  download
-                  title="Download video with enhanced audio"
-                >
-                  <Film class="size-4" aria-hidden="true" />
-                  Video
-                </a>
-                <a
-                  class="btn h-7 gap-1.5 border border-hairline bg-surface-2 px-2.5 text-body-sm text-ink-subtle hover:bg-surface-3 hover:text-ink"
-                  href={jobFileUrl(job.id, i, 'out')}
-                  download
-                  title="Download enhanced audio (WAV)"
-                >
-                  <Download class="size-4" aria-hidden="true" />
-                  Audio
-                </a>
-              {:else}
-                <a
-                  class="btn btn-primary h-7 gap-1.5 px-2.5 text-body-sm"
-                  href={jobFileUrl(job.id, i, 'out')}
-                  download
-                  title="Download enhanced audio (WAV)"
-                >
-                  <Download class="size-4" aria-hidden="true" />
-                  Audio
-                </a>
-              {/if}
+              <a
+                class="btn btn-primary h-7 gap-1.5 px-2.5 text-body-sm"
+                href={jobFileUrl(job.id, i, f.video ? 'video' : 'out')}
+                download
+                title={f.video ? 'Download video with enhanced audio' : 'Download enhanced audio'}
+              >
+                <Download class="size-4" aria-hidden="true" />
+                Download
+              </a>
             {:else if f.status === 'processing'}
               <span class="text-caption text-primary">working…</span>
             {:else if f.status === 'error'}
@@ -153,13 +129,6 @@
             {/if}
           </span>
         </div>
-        {#if f.status === 'done' && f.lufs_after != null}
-          <p class="m-0 mt-1 font-mono text-caption text-ink-tertiary tabular-nums">
-            {#if f.lufs_before != null}{f.lufs_before.toFixed(1)} → {/if}{f.lufs_after.toFixed(
-              1,
-            )} LUFS
-          </p>
-        {/if}
         {#if f.status === 'error' && f.error}
           <p class="m-0 mt-1 text-caption text-red-400">{f.error}</p>
         {/if}
