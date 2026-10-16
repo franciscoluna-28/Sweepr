@@ -1,9 +1,9 @@
 torch==2.1.2
 torchaudio==2.1.2
 deepfilternet==0.5.6
-fastapi
-uvicorn[standard]
-python-multipart
-soundfile
-numpy
-httpx  # smoke test (FastAPI TestClient)
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+soundfile==0.14.0
+numpy==1.26.4
+httpx==0.28.1  # smoke test (FastAPI TestClient)
