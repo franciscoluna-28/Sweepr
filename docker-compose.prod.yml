@@ -1,17 +1,27 @@
-# Production stack: one container serving the built UI + the API.
-# Build:  docker compose -f docker-compose.prod.yml up --build
+# Self-hosted Sweepr.
+#
+#   docker compose -f docker-compose.prod.yml up --build -d
+#   docker compose -f docker-compose.prod.yml logs sweepr   # prints the link
+#
+# A token is generated at startup and printed in the logs. Set SWEEPR_TOKEN to
+# keep the same link across restarts.
+#
+# Behind a reverse proxy with a domain, add SWEEPR_TRUSTED_HOSTS=sweepr.example.com
+# and terminate TLS at the proxy.
 services:
-  app:
+  sweepr:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ghcr.io/franciscoluna-28/sweepr:latest
     environment:
-      SWEEPR_PORT: "${SWEEPR_PORT:-8765}"
+      SWEEPR_TOKEN: "${SWEEPR_TOKEN:-}"
+      SWEEPR_TRUSTED_HOSTS: "${SWEEPR_TRUSTED_HOSTS:-}"
     ports:
-      - "${SWEEPR_PORT:-8765}:${SWEEPR_PORT:-8765}"
+      - "${SWEEPR_BIND:-127.0.0.1}:${SWEEPR_HOST_PORT:-8765}:8765"
     volumes:
-      - model-cache:/root/.cache
+      - sweepr-data:/data
     restart: unless-stopped
 
 volumes:
-  model-cache:
+  sweepr-data:

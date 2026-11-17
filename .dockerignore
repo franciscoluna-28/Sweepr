@@ -2,17 +2,25 @@
 .venv/
 **/__pycache__/
 **/*.pyc
+*.egg-info/
 .uv/
 
 # Node
 **/node_modules/
-**/dist/
 **/.vite/
+
+# Build output (the image builds the UI and wheel itself)
+dist/
+build/
+sweepr_app/ui/dist/
 
 # Repo / misc
 .git/
-.gitignore
+.github/
+audio/
+demos/
+scripts/
+tests/
 *.log
-README.md
 docker-compose*.yml
 Dockerfile*
