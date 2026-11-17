@@ -1,197 +1,189 @@
 # Sweepr
 
-[![CI](https://github.com/franciscoluna-28/Sweepr/actions/workflows/ci.yml/badge.svg)](https://github.com/franciscoluna-28/Sweepr/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/sweepr-app.svg)](https://pypi.org/project/sweepr-app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A simple local web app for removing noise from a single audio file using
-[DeepFilterNet](https://github.com/Rikorose/DeepFilterNet). Everything runs on
-your machine — recordings are never uploaded anywhere.
+Remove background noise from audio and video, locally, in your browser.
+Powered by [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet). Your files
+never leave your computer.
 
-## Features
+## Install and run
 
-- **Denoise one audio file** — drag & drop, or browse, and download the cleaned
-  WAV
-- **Video input** — drop an `mp4`, `mov`, `mkv`, `webm`, `avi`, or `m4v` and get
-  the video back with the cleaned audio muxed in (video stream copied, audio
-  re-encoded). The enhanced audio track is still available as WAV
-- **Noise reduction strength** slider (maps to DeepFilterNet's attenuation limit)
-- Optional post-filter for extra suppression on very noisy parts
-- Optional loudness normalization after cleaning (target -14 or -16 LUFS, with
-  a -1 dBTP true-peak ceiling; off by default, requires `ffmpeg`)
-- A/B compare original vs enhanced
-- Preserves the original sample rate; output is 24-bit WAV
+**Windows** (PowerShell):
 
-## Requirements
-
-- Python 3.11 (already set up in `.venv`)
-- Node.js + pnpm (build-time only — not needed to run the app)
-- `ffmpeg` on your `PATH` (required only for video input)
-
-## Setup
-
-On Windows the venv's Python lives at `.venv/Scripts/python.exe`; on
-macOS/Linux it's `.venv/bin/python`.
-
-```
-uv venv --python 3.11 .venv
-uv pip install --python .venv/Scripts/python.exe torch==2.1.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
-uv pip install --python .venv/Scripts/python.exe -r requirements.txt
-pnpm --dir app/ui install
+```powershell
+irm https://github.com/franciscoluna-28/sweepr/releases/latest/download/install.ps1 | iex
 ```
 
-Copy `.env.example` to `.env` if you want to change any limits or the port; see
-[Configuration](#configuration).
+**macOS or Linux**:
 
-## Run
-
-The app is a single Python process: it serves the built UI and handles requests.
-
-```
-pnpm --dir app/ui build
-.venv\Scripts\python.exe start.py
+```sh
+curl -fsSL https://github.com/franciscoluna-28/sweepr/releases/latest/download/install.sh | sh
 ```
 
-Or just launch it: on Windows double-click `run.bat`; on macOS/Linux run
-`./run.sh`. Both build the UI if needed, start the app, and open
-http://127.0.0.1:8765 automatically.
+**Anywhere, if you already use uv or pipx**:
 
-## Development
-
-Run the server and the Vite dev server (with HMR) side by side:
-
-```
-.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8765
-pnpm --dir app/ui dev
+```sh
+uvx --from sweepr-app sweepr
+pipx install sweepr-app && sweepr
 ```
 
-Or use the dev launcher, which starts both: `run-dev.bat` (Windows) or
-`./run.sh --dev` (macOS/Linux).
+Sweepr opens in your browser. Drop in audio or video files, press **Clean my
+audio**, and download the result. Keep the terminal window open while you use
+it; Ctrl+C stops Sweepr.
 
-Vite proxies `/api` to the Python process. Node is used for building only; the
-production app runs entirely on Python.
+The Windows installer adds a Start Menu shortcut and needs no admin rights. Use
+`-NoShortcut`, `-NoLaunch`, or `-Uninstall` to change what it does.
 
-## Docker
+### What the first run downloads
 
-### Dev (hot reload)
+Sweepr downloads its engine once: the DeepFilterNet `deep-filter` program plus,
+on Windows and Linux, `ffmpeg` and `ffprobe` (about 100 MB total). Every
+download is checked against a SHA-256 checksum pinned in
+`sweepr_app/assets_manifest.json`. macOS uses `deep-filter` from that download
+and `ffmpeg` from `PATH` (`brew install ffmpeg`). Later runs start immediately
+and work offline.
 
+If something is missing, run `sweepr doctor`. It reports each component and what
+to do about it.
+
+## What it does
+
+- **Audio or video in, cleaned audio out.** Videos come back with the cleaned
+  audio muxed into the original picture; audio comes back as 24-bit WAV at the
+  original sample rate.
+- **Noise reduction strength** slider (0 = off, 100 = maximum), with an optional
+  post-filter for very noisy sections.
+- **Optional loudness evening** to -14 or -16 LUFS (EBU R128).
+- **Quiet recordings** (typical of camera audio) are lifted before denoising so
+  the model does not treat them as silence.
+- **A/B compare**, per-file downloads, and a zip of everything in a batch.
+- Batches of up to 10 files; files up to 5 GB and 4 hours long.
+
+Supported inputs: WAV, MP3, FLAC, OGG, OPUS, MP4, MOV, MKV, WEBM, AVI, M4V.
+
+## Privacy
+
+Audio and video are processed on your machine and written to Sweepr's data
+folder (`%LOCALAPPDATA%\Sweepr` on Windows, `~/.local/share/sweepr` on Linux,
+`~/Library/Application Support/Sweepr` on macOS). Finished jobs are deleted after
+7 days. Sweepr makes no network requests except the one-time engine download.
+
+## Troubleshooting
+
+Run `sweepr doctor`. Common fixes:
+
+- **The engine is not installed:** start Sweepr once with internet access, or
+  run `sweepr install-assets`. On macOS also install `ffmpeg` (`brew install
+  ffmpeg`). Point `SWEEPR_BIN_DIR` at a folder with local binaries to stay
+  offline.
+- **Port 8765 is busy:** Sweepr picks a free port automatically and prints the
+  address. Use `--port` to choose one.
+
+## Self-hosting with Docker
+
+Sweepr can run on a server or NAS for people on your network. Every request
+except the health check must carry an access token.
+
+```sh
+docker compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml logs sweepr
 ```
-docker compose up --build
+
+The logs print the link with a token generated at startup. To keep the same link
+across restarts, set `SWEEPR_TOKEN` first:
+
+```sh
+export SWEEPR_TOKEN="$(openssl rand -hex 24)"
 ```
 
-- UI with HMR: http://localhost:5173 (Vite proxies `/api` to the `api` service)
-- API + docs: http://localhost:8765/docs
+The port is published on `127.0.0.1` only. To reach it from other machines, set
+`SWEEPR_BIND` to the interface address, and put a TLS reverse proxy in front of
+it. Then add the proxy's host name to `SWEEPR_TRUSTED_HOSTS`.
 
-Source (`app/`) is bind-mounted, so Python auto-reloads (`uvicorn --reload`) and
-the UI hot-reloads (Vite). The model cache and `node_modules` live in named
-volumes.
-
-### Production
-
-```
-docker compose -f docker-compose.prod.yml up --build
-```
-
-Builds the UI in a Node stage, then serves it (plus the API) from one Python
-container on http://localhost:8765.
+The image bundles the engine, so it works offline once built. A fresh build
+downloads the pinned engine automatically. Place Linux binaries in
+`engine-local/` only to build offline or to use your own build (see that
+folder's README).
 
 ## Configuration
 
-Limits are enforced server-side and mirrored to the UI via `/api/health`. Every
-value below can be overridden with an environment variable; invalid values make
-the app fail fast at startup with a message naming the variable.
-
-| Variable | Default | Meaning |
+| Setting | Where | Meaning |
 | --- | --- | --- |
-| `SWEEPR_MAX_FILES` | `10` | Files per batch job |
-| `SWEEPR_MAX_FILE_BYTES` | `5G` | Per-file size cap |
-| `SWEEPR_MAX_TOTAL_BYTES` | `10G` | Per-job total upload cap (≥ per-file cap) |
-| `SWEEPR_MAX_DURATION_S` | `14400` | Max media duration in seconds |
-| `SWEEPR_MAX_WAITING_JOBS` | `3` | Jobs allowed to wait in the queue |
-| `SWEEPR_RETENTION_DAYS` | `7` | Days before finished jobs are pruned |
-| `SWEEPR_JOBS_DIR` | `app/data/jobs` | Job storage dir (point at a mounted volume in the cloud) |
-| `SWEEPR_PORT` | `8765` | HTTP port (falls back to platform `PORT`, e.g. Cloud Run / Fly) |
+| `--port`, `--host` | CLI | Listen address (default: `127.0.0.1`, port 8765 or a free port) |
+| `--data-dir`, `SWEEPR_DATA_DIR` | CLI / env | Where jobs and logs are kept |
+| `--token`, `SWEEPR_TOKEN` | CLI / env | Fixed access token (default: random per launch) |
+| `--trusted-host`, `SWEEPR_TRUSTED_HOSTS` | CLI / env | Extra accepted `Host` names, comma-separated (reverse proxies) |
+| `--no-browser` | CLI | Do not open a browser window |
+| `SWEEPR_CACHE_DIR` | env | Where the downloaded engine is kept |
+| `SWEEPR_BIN_DIR` | env | Use the engine from this folder (offline, development) |
+| `SWEEPR_ASSET_BASE_URL` | env | Mirror for a published Sweepr engine archive |
+| `SWEEPR_USE_SYSTEM_FFMPEG` | env | Force `ffmpeg`/`ffprobe` from `PATH` |
 
-Byte sizes accept plain integers (bytes) or human suffixes: `5120M`, `5G`, `5GiB`.
+The access token is generated when Sweepr starts and kept in memory only.
+Stopping Sweepr invalidates the link; set `SWEEPR_TOKEN` (or `--token`) to keep a
+fixed token across restarts. Each launch is an independent server, so a second
+launch picks the next free port instead of reopening the first.
 
-Format allowlists (extensions, sample rates, channels) are intentionally not
-configurable.
+Processing limits are fixed product decisions, not settings: 10 files per batch,
+5 GB per file, 10 GB per batch, 4 hours per file, 8 kHz to 192 kHz, mono or
+stereo.
 
-Example (docker compose reads `SWEEPR_PORT` from your shell or `.env`):
+## Development
 
-```
-SWEEPR_PORT=9000 SWEEPR_MAX_FILES=2 docker compose -f docker-compose.prod.yml up --build
-```
+Requirements: Python 3.11+ and [uv](https://docs.astral.sh/uv/), Node 22 and
+pnpm 10 (for the UI), and a Rust toolchain only if you build the engine yourself.
 
-## How the UI talks to the server
-
-In production it's one process and one origin: FastAPI serves the built UI and
-the `/api/*` routes, and the UI calls them with relative paths (`/api/...`).
-In dev the UI runs on Vite and proxies `/api` to the server. Because the paths
-are relative, moving to a desktop shell (e.g. Tauri) later needs no client
-changes.
-
-The client is typed from the API itself. FastAPI's OpenAPI schema is exported to
-`app/ui/openapi.json`, then `openapi-typescript` generates
-`app/ui/src/lib/api-schema.d.ts`. The thin `app/ui/src/lib/api.ts` wraps the
-generated types with the tiny `openapi-fetch` client, plus a few domain helpers
-(job polling, direct file/zip URLs) that codegen can't express. After changing a
-route or a model in `app/schemas.py`, regenerate:
-
-```
-.venv\Scripts\python.exe scripts\export_openapi.py
-pnpm --dir app/ui gen:api
+```sh
+uv sync --extra dev                     # Python environment and test dependencies
+pnpm --dir sweepr_app/ui install        # UI dependencies
+uv run sweepr --no-browser --port 8765 --token dev   # backend (terminal 1)
+pnpm --dir sweepr_app/ui dev            # UI with hot reload (terminal 2)
 ```
 
-The generated files are committed, so the UI's Node-only build stage (and CI)
-don't need Python.
+Open <http://127.0.0.1:5173/#token=dev>. Vite proxies `/api` to the backend.
+
+Run `uv run sweepr install-assets` once to fetch the pinned engine. On macOS,
+also install `ffmpeg` with `brew install ffmpeg`. To use your own build, point
+`SWEEPR_BIN_DIR` at a folder containing `deep-filter`, `ffmpeg`, and `ffprobe`.
+
+Run the checks:
+
+```sh
+uv run python scripts/smoke_test.py    # engine, API, security, CLI
+pnpm --dir sweepr_app/ui check         # UI typecheck
+pnpm --dir sweepr_app/ui build         # UI production build
+```
 
 ## Project layout
 
 ```
-app/             The monolith (one package, one process)
-  main.py        Serves the built UI + handles /api/* (standard error shape)
-  api.py         HTTP routes (validation + wiring, no DSP)
-  schemas.py     Pydantic response/error models (source of the OpenAPI schema)
-  engine.py      DeepFilterNet engine (single-file, sample-rate preserving)
-  ui/            Svelte 5 + Vite + TypeScript + Tailwind source
-    openapi.json          Exported FastAPI schema (generated)
-    src/lib/api-schema.d.ts  Generated types (committed)
-  ui/dist/       Build output served by main.py
-start.py         Launcher (starts server, opens browser)
-run.bat          Windows launcher (builds UI if needed, then starts)
-run-dev.bat      Windows dev launcher (auto-reload + Vite HMR)
-run.sh           macOS/Linux launcher (./run.sh, or --dev)
-scripts/         Smoke test + OpenAPI exporter
-Dockerfile       Production image (UI build + Python runtime)
-Dockerfile.dev   Dev API image
-docker-compose.yml       Dev stack (api + web, HMR)
-docker-compose.prod.yml  Production stack
+sweepr_app/            The Python package (the `sweepr` command)
+  cli.py               sweepr: start, doctor, install-assets
+  server.py            FastAPI app factory: routes, upload guard, security
+  security.py          Host allowlist, access token, security headers
+  api.py               HTTP routes (validation and wiring)
+  engine.py            ffmpeg + deep-filter pipeline
+  jobs.py              job queue, manifests, cancellation
+  assets.py            engine download, checksum verification, cache
+  assets_manifest.json pinned engine components and archives per platform
+  paths.py, limits.py  per-user directories, product limits
+  ui/                  React + Vite + Tailwind frontend
+scripts/               smoke test, engine and asset builds, installers, OpenAPI export
+engine-local/          optional local engine binaries for Docker builds
+Dockerfile             self-hosting image (UI build, package, engine)
+docker-compose.prod.yml
 ```
-
-## Notes
-
-- The strength slider: 0 dB = no change, 100 dB = maximum suppression.
-- Very quiet recordings (common in camera/video audio) are automatically boosted
-  to a usable level before denoising — otherwise the model treats them as
-  silence. Loud inputs are left untouched.
-- DeepFilterNet processes at 48 kHz internally; Sweepr resamples back to the
-  source rate and writes a 24-bit WAV.
-- Loudness normalization runs *after* denoising (and before muxing a video), so
-  the cleaned audio is measured once and brought to target with a single linear
-  gain. It changes level, not signal-to-noise — only the denoiser does that.
-- The files in `demos/noisy/` are for manual testing; see
-  [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for their provenance.
 
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`AGENTS.md`](AGENTS.md). Commits
 follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0).
-Before opening a PR, run `scripts/smoke_test.py` and `pnpm --dir app/ui check`.
 
 ## License
 
-[MIT](LICENSE) © 2026 Francisco Luna. This covers Sweepr's own source code only.
-
-The audio under `demos/noisy/` is **not** MIT — it is third-party material
-relicensed here under SpeechBrain's Apache-2.0 terms. See
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for per-file provenance.
+[MIT](LICENSE) © 2026 Francisco Luna. This covers Sweepr's own source code.
+The engine and media tools are third-party components under their own licenses;
+see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). The audio under
+`demos/noisy/` is **not** MIT: it is third-party material relicensed under
+SpeechBrain's Apache-2.0 terms, with per-file provenance in the same file.

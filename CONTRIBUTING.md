@@ -1,26 +1,29 @@
 # Contributing to Sweepr
 
-Thanks for your interest in improving Sweepr. This guide is short — the
+Thanks for your interest in improving Sweepr. This guide is short. The
 project-specific rules live in [`AGENTS.md`](AGENTS.md), which both humans and
 automated agents follow.
 
 ## Development setup
 
-```
-uv venv --python 3.11 .venv
-uv pip install --python .venv/Scripts/python.exe torch==2.1.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
-uv pip install --python .venv/Scripts/python.exe -r requirements.txt
-pnpm --dir app/ui install
+```sh
+uv sync --extra dev
+pnpm --dir sweepr_app/ui install
 ```
 
-On macOS/Linux, replace `.venv/Scripts/python.exe` with `.venv/bin/python`.
+Run the backend and the UI in two terminals:
 
-Run the app in development (Python auto-reload + Vite HMR):
+```sh
+uv run sweepr --no-browser --port 8765 --token dev
+pnpm --dir sweepr_app/ui dev
+```
 
-```
-run-dev.bat          # Windows
-./run.sh --dev       # macOS/Linux
-```
+Open <http://127.0.0.1:5173/#token=dev>.
+
+Fetch the pinned engine with `uv run sweepr install-assets`. On macOS also
+install `ffmpeg` (`brew install ffmpeg`). To use your own build, run
+`uv run python scripts/build_engine.py` and set `SWEEPR_BIN_DIR` to a folder
+holding `deep-filter`, `ffmpeg`, and `ffprobe`.
 
 ## Commits
 
@@ -36,24 +39,37 @@ Common types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`,
 
 ## Before you open a pull request
 
-Run the same checks CI runs:
+Run the checks:
 
-```
-.venv\Scripts\python.exe scripts\smoke_test.py   # end-to-end API + engine
-pnpm --dir app/ui check                          # UI typecheck
-pnpm --dir app/ui build                          # UI production build
+```sh
+uv run python scripts/smoke_test.py    # engine, API, security, CLI
+pnpm --dir sweepr_app/ui check         # UI typecheck
+pnpm --dir sweepr_app/ui build         # UI production build
 ```
 
-If you changed a route in `app/api.py`, a model in `app/schemas.py`, or the
-error envelope, regenerate the committed API artifacts:
+If you changed a route in `sweepr_app/api.py`, a model in `sweepr_app/schemas.py`,
+or the error envelope, regenerate the committed API artifacts:
 
+```sh
+uv run python scripts/export_openapi.py
+pnpm --dir sweepr_app/ui gen:api
 ```
-.venv\Scripts\python.exe scripts\export_openapi.py
-pnpm --dir app/ui gen:api
-```
+
+## Releasing
+
+1. Bump the version in `pyproject.toml`, `sweepr_app/__init__.py`,
+   `sweepr_app/assets_manifest.json`, `sweepr_app/ui/package.json`, and the
+   installer scripts. The smoke test checks the first and the manifest.
+2. Update `CHANGELOG.md`.
+3. Build the engine archives for each platform with `scripts/build_engine.py`
+   and `scripts/build_assets.py`, then publish the GitHub Release, the PyPI
+   package, and the Docker image.
+4. When the engine changes, commit the new checksums in
+   `sweepr_app/assets_manifest.json` in a reviewed change before tagging. Verify
+   every archive against the manifest before publishing.
 
 ## Pull requests
 
 - Keep changes focused; one logical change per PR.
 - Describe the "why" in the PR body, not just the "what".
-- Make sure CI is green.
+- Run the checks above before opening the PR.

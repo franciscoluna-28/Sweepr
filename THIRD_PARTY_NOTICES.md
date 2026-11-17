@@ -6,29 +6,47 @@ assets. This file is informational and does not modify those licenses.
 
 ## Runtime dependencies
 
+The engine and media tools are downloaded by Sweepr on first run (or built by
+our release pipeline) and verified against pinned SHA-256 checksums.
+
 | Component | Version | License | Source |
 | --- | --- | --- | --- |
-| [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | 0.5.6 | MIT OR Apache-2.0 | Rikorose/DeepFilterNet |
-| [PyTorch](https://github.com/pytorch/pytorch) | 2.1.2 | BSD-3-Clause | pytorch/pytorch |
-| [torchaudio](https://github.com/pytorch/audio) | 2.1.2 | BSD-2-Clause | pytorch/audio |
-| [FastAPI](https://github.com/fastapi/fastapi) | 0.142.2 | MIT | fastapi/fastapi |
-| [Uvicorn](https://github.com/encode/uvicorn) | 0.54.0 | BSD-3-Clause | encode/uvicorn |
-| [Starlette](https://github.com/encode/starlette) | 1.7.0 | BSD-3-Clause | encode/starlette |
-| [Pydantic](https://github.com/pydantic/pydantic) | 2.13.5 | MIT | pydantic/pydantic |
-| [python-multipart](https://github.com/Kludex/python-multipart) | 0.0.32 | Apache-2.0 | Kludex/python-multipart |
-| [soundfile](https://github.com/bastibe/python-soundfile) | 0.14.0 | BSD-3-Clause | bastibe/python-soundfile |
-| [NumPy](https://github.com/numpy/numpy) | 1.26.4 | BSD-3-Clause | numpy/numpy |
-| [HTTPX](https://github.com/encode/httpx) | 0.28.1 | BSD-3-Clause | encode/httpx |
+| [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) (`deep-filter` CLI) | 0.5.6 (tag commit `978576aa`) | MIT OR Apache-2.0 | Rikorose/DeepFilterNet |
+| [FFmpeg](https://ffmpeg.org) (`ffmpeg`, `ffprobe`) | 9.0 | LGPL-2.1-or-later (shared, no GPL components) | ffmpeg.org; LGPL build from [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) |
 
 DeepFilterNet is dual-licensed under MIT OR Apache-2.0; Sweepr elects the MIT
-option for its own distribution. Model weights are downloaded at runtime by
-DeepFilterNet and are covered by that project's license.
+option for its own distribution. The DeepFilterNet3 model weights are compiled
+into the `deep-filter` binary and are covered by that project's license.
 
-## Front-end build dependencies
+FFmpeg is redistributed as shared libraries built without GPL components. The
+license texts ship in the upstream ffmpeg archive. The corresponding source is
+available from the FFmpeg project at the version above.
 
-The UI (`app/ui/`) is built with Svelte, Vite, TypeScript, and Tailwind CSS,
-each under its own license. These are build-time dependencies only and are not
-redistributed with the app.
+## Python runtime dependencies
+
+| Component | License | Source |
+| --- | --- | --- |
+| [FastAPI](https://github.com/fastapi/fastapi) | MIT | fastapi/fastapi |
+| [Uvicorn](https://github.com/encode/uvicorn) | BSD-3-Clause | encode/uvicorn |
+| [Starlette](https://github.com/encode/starlette) | BSD-3-Clause | encode/starlette |
+| [Pydantic](https://github.com/pydantic/pydantic) | MIT | pydantic/pydantic |
+| [python-multipart](https://github.com/Kludex/python-multipart) | Apache-2.0 | Kludex/python-multipart |
+| [platformdirs](https://github.com/tox-dev/platformdirs) | MIT | tox-dev/platformdirs |
+
+Development-only test dependency: httpx2 (BSD-3-Clause).
+
+## Front-end runtime dependencies
+
+The UI is a React application built with Vite and Tailwind CSS.
+
+| Component | License |
+| --- | --- |
+| [React](https://github.com/facebook/react) and React DOM | MIT |
+| [Lucide](https://github.com/lucide-icons/lucide) (`lucide-react`) | ISC |
+| [openapi-fetch](https://github.com/openapi-ts/openapi-typescript) | MIT |
+
+Build-time only (not redistributed): Vite, Tailwind CSS, TypeScript,
+openapi-typescript, and the React plugin for Vite, each under its own license.
 
 ## Bundled media assets
 
