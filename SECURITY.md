@@ -24,6 +24,8 @@ deployment for a trusted network.
   Docker, and the compose file publishes the port on `127.0.0.1` by default. It
   generates a token at startup and prints the link in its logs. Set
   `SWEEPR_TOKEN` to a long random value to keep the same token across restarts.
+  Remote clients must also match the exact `Host` header (including the
+  published port) listed in `SWEEPR_TRUSTED_HOSTS`, or requests are refused.
   Do not expose the port to an untrusted network without TLS and access control
   in front of it.
 - **Engine downloads.** Each downloaded file is fetched over HTTPS and must match

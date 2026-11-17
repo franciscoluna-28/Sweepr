@@ -5,24 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0]
+## [1.0.0] - 2026-11-17
 
-First public release, distributed as a Python package and as an installer
-script. Sweepr runs in your browser and works offline after the first run.
+First public release, delivered as a self-hosted Docker image for a trusted
+network. Sweepr runs in your browser and works offline once the image is built.
+Desktop packaging and one-line installers are in the source tree but are not
+published yet.
 
 ### Added
 
-- `uvx --from sweepr-app sweepr`, `pipx install sweepr-app`, and one-line
-  installers for Windows (`install.ps1`) and macOS/Linux (`install.sh`).
-- The engine (DeepFilterNet's `deep-filter` plus LGPL ffmpeg) is downloaded on
-  first run and checked against pinned SHA-256 checksums. `sweepr doctor` reports
-  its status.
+- Docker image for self-hosting (linux/amd64), with the engine, ffmpeg, shared
+  libraries, and model bundled, plus a health check and a compose file that
+  publishes the port on loopback by default.
+- The engine (DeepFilterNet's `deep-filter` plus LGPL ffmpeg) is downloaded at
+  image build time and checked against pinned SHA-256 checksums. `sweepr doctor`
+  reports its status.
 - Per-launch access token, loopback binding, Host-header allowlist, and a strict
   Content-Security-Policy for the local server. Docker generates a token at
   startup; set `SWEEPR_TOKEN` to keep one across restarts. Empty tokens are
   refused at startup.
-- Docker image for self-hosting, with the engine and its shared libraries
-  bundled.
+- An `.env.example` template for the self-hosted token, bind address, port, and
+  trusted host names.
+- Source-tree support for `uvx --from sweepr-app sweepr`, `pipx install
+  sweepr-app`, and one-line installers for Windows (`install.ps1`) and
+  macOS/Linux (`install.sh`); these are not published yet.
 
 ### Changed
 
