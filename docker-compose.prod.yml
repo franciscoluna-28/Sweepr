@@ -1,15 +1,23 @@
 # Self-hosted Sweepr.
 #
+#   cp .env.example .env
 #   docker compose -f docker-compose.prod.yml up --build -d
-#   docker compose -f docker-compose.prod.yml logs sweepr   # prints the link
+#   docker compose -f docker-compose.prod.yml logs sweepr
 #
-# A token is generated at startup and printed in the logs. Set SWEEPR_TOKEN to
-# keep the same link across restarts.
+# Set SWEEPR_TOKEN to keep the same link across restarts. Without it, a new
+# token is generated and printed in the logs on every start.
 #
-# Behind a reverse proxy with a domain, add SWEEPR_TRUSTED_HOSTS=sweepr.example.com
-# and terminate TLS at the proxy.
+# LAN access example:
+#   SWEEPR_BIND=0.0.0.0
+#   SWEEPR_TRUSTED_HOSTS=192.168.1.50:8765   # exact Host header, port included
+#
+# Behind a TLS proxy on 443, use the forwarded domain name:
+#   SWEEPR_TRUSTED_HOSTS=sweepr.example.com
+#
+# The bundled engine is linux/amd64; use an x86_64 host.
 services:
   sweepr:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile

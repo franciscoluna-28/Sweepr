@@ -30,6 +30,9 @@ out/
 enhance.log
 sweepr_app/data/
 
+# Local deployment secrets
+.env
+
 # Test artifacts
 noisy.wav
 enhanced_*.wav

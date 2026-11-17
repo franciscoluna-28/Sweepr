@@ -22,5 +22,6 @@ demos/
 scripts/
 tests/
 *.log
+.env
 docker-compose*.yml
 Dockerfile*
