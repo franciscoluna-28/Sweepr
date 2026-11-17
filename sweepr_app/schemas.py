@@ -51,7 +51,8 @@ class Limits(BaseModel):
 
 class Health(BaseModel):
     status: str
-    models_loaded: list[bool]
+    version: str
+    engine_ready: bool
     limits: Limits
 
 

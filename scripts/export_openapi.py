@@ -1,27 +1,30 @@
-"""Export the FastAPI OpenAPI schema to app/ui/openapi.json.
+"""Export the FastAPI OpenAPI schema to sweepr_app/ui/openapi.json.
 
-The Svelte client types are generated from this file:
+The UI's TypeScript types are generated from this file:
 
-    .venv\\Scripts\\python.exe scripts\\export_openapi.py
-    pnpm --dir app/ui gen:api
+    uv run python scripts/export_openapi.py
+    pnpm --dir sweepr_app/ui gen:api
 
 Run from the project root.
 """
 
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from app.main import app  # noqa: E402
+from sweepr_app.server import Settings, create_app  # noqa: E402
 
-OUT = ROOT / "app" / "ui" / "openapi.json"
+OUT = ROOT / "sweepr_app" / "ui" / "openapi.json"
 
 
 def main() -> None:
-    schema = app.openapi()
+    with tempfile.TemporaryDirectory() as tmp:
+        app = create_app(Settings(data_dir=Path(tmp), token="unused"))
+        schema = app.openapi()
     OUT.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)} ({len(schema['paths'])} paths)")
 

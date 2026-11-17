@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sweepr-app"
+version = "1.0.0"
+description = "Remove background noise from audio and video, locally, in your browser. Powered by DeepFilterNet."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+keywords = ["noise reduction", "denoise", "deepfilternet", "audio", "video", "speech"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
+    "platformdirs>=4.2",
+]
+
+[project.optional-dependencies]
+dev = ["httpx2>=2.16"]
+
+[project.scripts]
+sweepr = "sweepr_app.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/franciscoluna-28/sweepr"
+Source = "https://github.com/franciscoluna-28/sweepr"
+Issues = "https://github.com/franciscoluna-28/sweepr/issues"
+Changelog = "https://github.com/franciscoluna-28/sweepr/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+include = ["sweepr_app", "sweepr_app.*"]
+
+[tool.setuptools.package-data]
+sweepr_app = ["ui/dist/**/*", "assets_manifest.json", "THIRD_PARTY_NOTICES.md"]

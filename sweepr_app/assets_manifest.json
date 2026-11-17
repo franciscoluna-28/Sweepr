@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "base_url": "https://github.com/franciscoluna-28/sweepr/releases/download/v1.0.0",
+  "platforms": {
+    "windows-x86_64": {
+      "file": "sweepr-assets-1.0.0-windows-x86_64.zip",
+      "sha256": null,
+      "size": null,
+      "deep_filter": {
+        "url": "https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-x86_64-pc-windows-msvc.exe",
+        "sha256": "75e11fa16445f560cb6b021521ddb89e89270d13b83089705d98776f58fd7915",
+        "size": 26912256
+      },
+      "ffmpeg": {
+        "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-11-15-12-40/ffmpeg-n9.0.2-57-gd838f9f9ae-win64-lgpl-shared-9.0.zip",
+        "sha256": "6305750bb1b4e3f80d17a6644fec1cf57eef12106c4f9192ddb05e14a6b522b0",
+        "kind": "zip"
+      }
+    },
+    "macos-arm64": {
+      "file": "sweepr-assets-1.0.0-macos-arm64.zip",
+      "sha256": null,
+      "size": null,
+      "deep_filter": {
+        "url": "https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-aarch64-apple-darwin",
+        "sha256": "4601e7f4e4c03e59a4c5b5000216ef3add3e808799cfccd95e14e83ea4611081",
+        "size": 27877081
+      }
+    },
+    "macos-x86_64": {
+      "file": "sweepr-assets-1.0.0-macos-x86_64.zip",
+      "sha256": null,
+      "size": null,
+      "deep_filter": {
+        "url": "https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-x86_64-apple-darwin",
+        "sha256": "d3be84003acb7c23e738ad7f70a158ec779a8d233a82e7fa3e717d112eb5b50f",
+        "size": 29933512
+      }
+    },
+    "linux-x86_64": {
+      "file": "sweepr-assets-1.0.0-linux-x86_64.zip",
+      "sha256": null,
+      "size": null,
+      "deep_filter": {
+        "url": "https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-x86_64-unknown-linux-musl",
+        "sha256": "70775e251eee44c0f2451a1e833326cf8bcbbe304d3e7cd12851e6fce72ef7da",
+        "size": 36417296
+      },
+      "ffmpeg": {
+        "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-11-15-12-40/ffmpeg-n9.0.2-57-gd838f9f9ae-linux64-lgpl-shared-9.0.tar.xz",
+        "sha256": "91cc21d810b82d391a78c1bdf60a60922f56b91a69589e11e76a5195f343a81d",
+        "kind": "tar"
+      }
+    }
+  }
+}

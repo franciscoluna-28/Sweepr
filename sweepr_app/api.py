@@ -13,7 +13,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 from starlette.background import BackgroundTask
 
-from . import engine, jobs, limits, schemas
+from . import __version__, assets, engine, jobs, limits, schemas
 
 router = APIRouter(prefix="/api", tags=["jobs"])
 
@@ -69,7 +69,8 @@ async def _save(upload: UploadFile, dest, total_so_far: int) -> int:
 def health():
     return {
         "status": "ok",
-        "models_loaded": list(engine._models.keys()),
+        "version": __version__,
+        "engine_ready": assets.is_ready(),
         "limits": {
             "max_files": limits.MAX_FILES,
             "max_file_mb": limits.MAX_FILE_BYTES // 1048576,

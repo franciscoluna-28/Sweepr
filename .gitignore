@@ -28,7 +28,7 @@ models/
 *.log
 out/
 enhance.log
-app/data/
+sweepr_app/data/
 
 # Test artifacts
 noisy.wav
@@ -44,3 +44,11 @@ Desktop.ini
 # Editors
 .vscode/
 .idea/
+
+# Build outputs and local engine binaries
+dist/
+build/
+*.egg-info/
+engine-local/*
+!engine-local/README.md
+!engine-local/.gitkeep

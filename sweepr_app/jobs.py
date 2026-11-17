@@ -1,32 +1,49 @@
 """Job queue: on-disk job directories plus a single worker thread.
 
-The manifest.json inside each job directory is the source of truth — no
-database, no broker. The API thread writes jobs, the worker thread runs them,
-and readers only ever see atomic (temp-file + rename) manifest swaps.
+The manifest.json inside each job directory is the source of truth: no
+database, no broker. The request thread writes jobs, the worker thread runs
+them, and readers only ever see atomic (temp-file + rename) manifest swaps.
 """
 
+from __future__ import annotations
+
 import json
+import logging
 import os
 import queue
 import re
 import shutil
 import threading
-import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from . import engine, limits
 
-JOBS_DIR = limits.JOBS_DIR
+log = logging.getLogger("sweepr.jobs")
+
 _MANIFEST = "manifest.json"
 _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 ACTIVE_STATUSES = ("queued", "running")
 
-_queue: "queue.Queue[str | None]" = queue.Queue()
+_queue: queue.Queue[str | None] = queue.Queue()
 _lock = threading.Lock()
 _cancels: dict[str, threading.Event] = {}
 _running: str | None = None
 _thread: threading.Thread | None = None
+_jobs_dir: Path | None = None
+
+
+def configure(path: Path) -> None:
+    """Set where job directories live. Called once at server startup."""
+    global _jobs_dir
+    _jobs_dir = Path(path)
+    _jobs_dir.mkdir(parents=True, exist_ok=True)
+
+
+def jobs_dir() -> Path:
+    if _jobs_dir is None:
+        raise RuntimeError("jobs.configure() has not been called")
+    return _jobs_dir
 
 
 def is_valid_id(job_id: str) -> bool:
@@ -34,12 +51,17 @@ def is_valid_id(job_id: str) -> bool:
 
 
 def job_dir(job_id: str) -> Path:
-    return JOBS_DIR / job_id
+    if not is_valid_id(job_id):
+        raise ValueError("invalid job id")
+    path = (jobs_dir() / job_id).resolve()
+    if not path.is_relative_to(jobs_dir().resolve()):
+        raise ValueError("invalid job id")
+    return path
 
 
 def read_job(job_id: str) -> dict | None:
-    path = job_dir(job_id) / _MANIFEST
     try:
+        path = job_dir(job_id) / _MANIFEST
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
@@ -53,10 +75,9 @@ def write_job(job: dict) -> None:
 
 
 def list_jobs() -> list[dict]:
-    if not JOBS_DIR.is_dir():
-        return []
+    root = jobs_dir()
     jobs = []
-    for path in JOBS_DIR.iterdir():
+    for path in root.iterdir():
         if path.is_dir() and is_valid_id(path.name):
             job = read_job(path.name)
             if job:
@@ -115,7 +136,7 @@ def _run_job(job_id: str) -> None:
         src = job_dir(job_id) / entry["stored"]
         dst = job_dir(job_id) / "out" / f"{i:02d}.wav"
         try:
-            result = engine.process_file(str(src), str(dst), job["settings"])
+            result = engine.process_file(src, dst, job["settings"], cancel)
             entry.update(
                 status="done",
                 error=None,
@@ -124,11 +145,15 @@ def _run_job(job_id: str) -> None:
                 lufs_after=result["lufs_after"],
             )
             if result["video"]:
-                entry["video"] = f"out/{os.path.basename(result['video'])}"
+                entry["video"] = f"out/{Path(result['video']).name}"
+        except engine.Cancelled:
+            cancelled = True
+            break
         except engine.AudioError as e:
             entry.update(status="error", error=str(e))
-        except Exception as e:
-            entry.update(status="error", error=f"processing failed: {e}")
+        except Exception:
+            log.exception("processing failed for %s", entry["name"])
+            entry.update(status="error", error="processing failed (see the Sweepr log)")
         write_job(job)
 
     if cancelled or cancel.is_set():
@@ -169,11 +194,10 @@ def stop_worker() -> None:
 
 
 def recover() -> None:
-    """At startup: prune old jobs, mark anything half-done as interrupted."""
-    if not JOBS_DIR.is_dir():
-        return
+    """At startup: prune old jobs and mark anything half-done as interrupted."""
+    root = jobs_dir()
     cutoff = datetime.now(timezone.utc) - timedelta(days=limits.RETENTION_DAYS)
-    for path in list(JOBS_DIR.iterdir()):
+    for path in list(root.iterdir()):
         if not path.is_dir() or not is_valid_id(path.name):
             shutil.rmtree(path, ignore_errors=True)
             continue
@@ -196,5 +220,5 @@ def recover() -> None:
             for f in job["files"]:
                 if f.get("status") in ("queued", "processing"):
                     f["status"] = "error"
-                    f["error"] = "server restarted before this file finished"
+                    f["error"] = "Sweepr closed before this file finished"
             write_job(job)
