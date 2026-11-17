@@ -11,14 +11,14 @@ uv sync --extra dev
 pnpm --dir sweepr_app/ui install
 ```
 
-Run the backend and the UI in two terminals:
+Run the backend and the UI together:
 
 ```sh
-uv run sweepr --no-browser --port 8765 --token dev
-pnpm --dir sweepr_app/ui dev
+uv run python scripts/dev.py
 ```
 
-Open <http://127.0.0.1:5173/#token=dev>.
+On Windows you can also run `.\scripts\dev.ps1`; on macOS/Linux,
+`sh scripts/dev.sh`. Open <http://127.0.0.1:5173/#token=dev>.
 
 Fetch the pinned engine with `uv run sweepr install-assets`. On macOS also
 install `ffmpeg` (`brew install ffmpeg`). To use your own build, run
