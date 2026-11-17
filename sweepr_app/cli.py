@@ -64,12 +64,19 @@ def serve(args: argparse.Namespace) -> int:
     trusted = list(args.trusted_host) + [
         h for h in os.environ.get("SWEEPR_TRUSTED_HOSTS", "").split(",") if h.strip()
     ]
-    if host not in ("127.0.0.1", "localhost", "::1"):
+    remote = host not in ("127.0.0.1", "localhost", "::1")
+    if remote:
         print(
             f"warning: listening on {host}. Anyone who can reach this port needs the token. "
             "Put a TLS reverse proxy in front of it.",
             file=sys.stderr,
         )
+        if not trusted:
+            print(
+                "warning: SWEEPR_TRUSTED_HOSTS is empty, so remote browsers will be rejected "
+                "with 'invalid host header'. Add the exact host:port you use to open Sweepr.",
+                file=sys.stderr,
+            )
 
     import uvicorn
 
@@ -78,10 +85,20 @@ def serve(args: argparse.Namespace) -> int:
     settings = Settings(data_dir=data, token=token, port=port, trusted_hosts=tuple(trusted))
     app = create_app(settings)
 
-    url = _url(port, token)
+    display_host = "127.0.0.1" if host in ("0.0.0.0", "::") or not remote else host
+    url = _url(port, token, display_host)
     print(f"Sweepr is running at {_url(port)}")
     print("Open it with this link (keep this window open; Ctrl+C stops Sweepr):")
     print(f"  {url}")
+    if remote:
+        target = display_host if display_host != "127.0.0.1" else "<server-address>"
+        print(f"From another machine: http://{target}:{port}/#token={token}")
+        print("Use the published host port if it differs from the port above.")
+        if not trusted:
+            print(
+                f"Add the exact host:port you open ({target}:{port}, or the published port) "
+                "to SWEEPR_TRUSTED_HOSTS."
+            )
     if not args.no_browser:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
 
