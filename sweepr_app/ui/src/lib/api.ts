@@ -1,9 +1,9 @@
-// Typed client generated from the FastAPI schema.
+// Typed client for the Sweepr API.
 //
-// Types come from ./api-schema.d.ts (regenerate with `pnpm gen:api`). Transport
-// is the tiny `openapi-fetch` wrapper; the domain helpers below (polling, direct
-// file/zip URLs) stay hand-written because a generated client returns bodies,
-// not URLs, and the DOM wants `src`/`href` strings.
+// Types come from ./api-schema.d.ts (regenerate with `pnpm gen:api` after
+// changing the backend schema). Transport is openapi-fetch; the helpers below
+// add the per-launch access token and URL builders for <audio>/<a> tags, which
+// cannot send headers.
 
 import createClient from 'openapi-fetch'
 import type { components, paths } from './api-schema'
@@ -14,8 +14,6 @@ export type JobSettings = components['schemas']['JobSettings']
 export type JobFile = components['schemas']['JobFile']
 export type Job = components['schemas']['Job']
 export type JobStatus = Job['status']
-export type FileStatus = JobFile['status']
-export type ErrorDetail = components['schemas']['ErrorDetail']
 export type ErrorEnvelope = components['schemas']['ErrorEnvelope']
 
 export interface JobParams {
@@ -25,7 +23,32 @@ export interface JobParams {
   targetLufs: number
 }
 
+const TOKEN_KEY = 'sweepr-token'
+
+/**
+ * The launcher opens the app at http://127.0.0.1:<port>/#token=<token>. The
+ * fragment never reaches the server; we keep the token for this tab, then strip
+ * it from the address bar so it is not visible or bookmarked.
+ */
+function readToken(): string {
+  const fromHash = new URLSearchParams(window.location.hash.slice(1)).get('token')
+  if (fromHash) {
+    sessionStorage.setItem(TOKEN_KEY, fromHash)
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    return fromHash
+  }
+  return sessionStorage.getItem(TOKEN_KEY) ?? ''
+}
+
+export const accessToken = readToken()
+
 const client = createClient<paths>({ baseUrl: '' })
+client.use({
+  onRequest({ request }) {
+    if (accessToken) request.headers.set('X-Sweepr-Token', accessToken)
+    return request
+  },
+})
 
 export function isActive(status: JobStatus): boolean {
   return status === 'queued' || status === 'running'
@@ -33,6 +56,7 @@ export function isActive(status: JobStatus): boolean {
 
 function errorFrom(error: ErrorEnvelope | undefined, status: number): Error {
   const detail = error?.detail
+  if (status === 401) return new Error('Access denied. Open Sweepr from the link printed by the launcher.')
   if (detail?.errors?.length) return new Error(detail.errors.join(' · '))
   if (detail?.message) return new Error(detail.message)
   return new Error(`Request failed (${status})`)
@@ -60,8 +84,8 @@ export async function getJob(id: string): Promise<Job> {
 
 export async function createJob(files: File[], params: JobParams): Promise<string> {
   const { data, error, response } = await client.POST('/api/jobs', {
-    // Browsers send binary as a string in the schema; the real File[] rides in
-    // the serializer below (the documented openapi-fetch multipart pattern).
+    // The schema describes uploads as strings; the real File[] is serialized
+    // into multipart form data by bodySerializer below.
     body: {
       files: files as unknown as string[],
       atten_lim_db: params.attenLimDb,
@@ -90,12 +114,17 @@ export async function deleteJob(id: string): Promise<void> {
   if (error && response.status !== 404) throw errorFrom(error, response.status)
 }
 
+function withToken(path: string): string {
+  const sep = path.includes('?') ? '&' : '?'
+  return `${path}${sep}token=${encodeURIComponent(accessToken)}`
+}
+
 export function jobFileUrl(id: string, index: number, which: 'in' | 'out' | 'video'): string {
-  return `/api/jobs/${id}/files/${index}?which=${which}`
+  return withToken(`/api/jobs/${id}/files/${index}?which=${which}`)
 }
 
 export function jobZipUrl(id: string): string {
-  return `/api/jobs/${id}/zip`
+  return withToken(`/api/jobs/${id}/zip`)
 }
 
 /** Poll a job every 700 ms until it leaves an active state. Returns a stop fn. */

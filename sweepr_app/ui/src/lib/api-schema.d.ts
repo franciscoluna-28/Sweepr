@@ -151,8 +151,10 @@ export interface components {
         Health: {
             /** Status */
             status: string;
-            /** Models Loaded */
-            models_loaded: boolean[];
+            /** Version */
+            version: string;
+            /** Engine Ready */
+            engine_ready: boolean;
             limits: components["schemas"]["Limits"];
         };
         /** Job */

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Sweepr",
-    "description": "Local, single-process app that removes background noise from audio files with DeepFilterNet. Files never leave the machine. The Svelte UI is served by this same app; every run \u2014 even a single file \u2014 is a job.",
-    "version": "0.1.0"
+    "description": "Local, single-user app that removes background noise from audio and video with DeepFilterNet. Files never leave the machine. Every /api route except /api/health requires the per-launch access token.",
+    "version": "1.0.0"
   },
   "paths": {
     "/api/health": {
@@ -459,12 +459,13 @@
             "type": "string",
             "title": "Status"
           },
-          "models_loaded": {
-            "items": {
-              "type": "boolean"
-            },
-            "type": "array",
-            "title": "Models Loaded"
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "engine_ready": {
+            "type": "boolean",
+            "title": "Engine Ready"
           },
           "limits": {
             "$ref": "#/components/schemas/Limits"
@@ -473,7 +474,8 @@
         "type": "object",
         "required": [
           "status",
-          "models_loaded",
+          "version",
+          "engine_ready",
           "limits"
         ],
         "title": "Health"
